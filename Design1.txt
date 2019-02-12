@@ -7,6 +7,7 @@ CIS 520 - Programming Project #1
 >> Fill in the names and email addresses of your group members.
 
 Aswini Patro <apatro@ksu.edu>
+Weston Harder <wmharder@ksu.edu>
 FirstName LastName <email@k-state.edu>
 ...
 
