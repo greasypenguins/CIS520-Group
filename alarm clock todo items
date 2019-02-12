@@ -1,0 +1,18 @@
+alarm clock structs:
+thread needs wake up time field
+sleeping thread list
+timer dedicated semaphore of some kind for synchronization
+
+timer sleep:
+ if thread needs to sleep
+ add current clock cycles to sleep duration
+ set wake up time to this value
+ put thread into sleep queue
+ decrement semaphore
+
+timer thread interrupt handler thing:
+ every tick check to see if list has contents
+ if list has contents check first items wake up time
+ if wake up time is equal or less, pop thread out of list
+ increment semaphore
+ 
