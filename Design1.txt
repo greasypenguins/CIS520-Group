@@ -34,7 +34,7 @@ timer.c
 - Added static struct list ready_queue: A list of threads currently waiting
 
 thread.h
-- 
+- Added int64_t sleep_tick: 
 
 ---- ALGORITHMS ----
 
