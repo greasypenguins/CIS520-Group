@@ -104,7 +104,7 @@ timer_sleep (int64_t ticks)
   struct list_elem * this_thread_elem = &(this_thread->elem);
   list_insert_ordered(&ready_queue, &this_thread_elem, timer_less_func, NULL);
   
-  //WMH: Need to add lock/semaphore/thread sleep stuff to this function
+  //WMH: Put thread to sleep
 }
 
 /* Compares the value of the sleep_tick in threads with list elements A and B, given
@@ -201,8 +201,18 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-
-  //WMH: Need to pop thread from front/back of ready_queue, then start the thread again
+  
+  if(list_size(&ready_queue) > 0)
+  {
+    struct list_elem * thread_elem = &(ready_queue.head)
+    struct thread * next_thread = list_entry(thread_elem, struct thread, elem);
+    
+    if(timer_ticks() >= next_thread->sleep_tick)
+    {
+      list_pop_front(&ready_queue)
+      //WMH: Start thread again
+    }
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
