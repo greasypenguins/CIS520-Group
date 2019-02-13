@@ -39,6 +39,9 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init(&ready_queue);
+  struct semaphore sleep_sema;
+  sema_init(&sleep_sema, 0);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -105,6 +108,7 @@ timer_sleep (int64_t ticks)
   list_insert_ordered(&ready_queue, &this_thread_elem, timer_less_func, NULL);
   
   //WMH: Put thread to sleep: sema down?
+  sema_down(&sleep_sema);
 }
 
 /* Compares the value of the sleep_tick in threads with list elements A and B, given
@@ -211,6 +215,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
     {
       list_pop_front(&ready_queue)
       //WMH: Start thread again: sema up?
+      sema_up(&sleep_sema);
     }
   }
 }
