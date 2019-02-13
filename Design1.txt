@@ -30,11 +30,18 @@ FirstName LastName <email@k-state.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+timer.c
+- Added static struct list ready_queue: A list of threads currently waiting
+
+thread.h
+- 
 
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe what happens in a call to your timer_sleep(),
 >> including the effects of the timer interrupt handler.
+
+
 
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
