@@ -30,6 +30,8 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+static struct list ready_queue;
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -89,11 +91,38 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
+  //int64_t start = timer_ticks ();
+  int64_t end = timer_ticks() + ticks;
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  //while (timer_elapsed (start) < ticks) 
+  //  thread_yield ();
+  
+  struct thread * this_thread = thread_current();
+  this_thread->sleep_tick = end;
+
+  struct list_elem * this_thread_elem = &(this_thread->elem);
+  list_insert_ordered(&ready_queue, &this_thread_elem, timer_less_func, NULL);
+  
+  //WMH: Need to add lock/semaphore/thread sleep stuff to this function
+}
+
+/* Compares the value of the sleep_tick in threads with list elements A and B, given
+   auxiliary data AUX.  Returns true if thread A's  is less than thread B's, or
+   false if A is greater than or equal to B. */
+bool timer_less_func (const struct list_elem *a, const struct list_elem *b, void *aux)
+{
+  struct thread * thread_a = list_entry(a, struct thread, elem);
+  struct thread * thread_b = list_entry(b, struct thread, elem);
+  
+  if(thread_a->sleep_tick < thread_b->sleep_tick)
+  {
+    return(true);
+  }
+  else
+  {
+    return(false);
+  }
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -172,6 +201,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+
+  //WMH: Need to pop thread from front/back of ready_queue, then start the thread again
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
