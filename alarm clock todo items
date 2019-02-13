@@ -15,4 +15,33 @@ timer thread interrupt handler thing:
  if list has contents check first items wake up time
  if wake up time is equal or less, pop thread out of list
  increment semaphore
- 
+
+
+
+
+
+
+git commands:
+
+git status
+	Just run this all the time for info. Run fetch first.
+
+git fetch
+	Gets info from the server
+
+git pull --rebase
+	Downloads commit(s) from the server to your computer and then puts your local commit(s) on top of them. All locally.
+		DOES NOT UPLOAD ANYTHING
+
+git add <filename>
+	Stages all changes to the file specified
+
+git add -A
+	Stages all changes to all files
+
+git commit -m "message"
+	Commits your staged changes with a message
+
+git push
+	Pushes (uploads) your commits to the server
+
