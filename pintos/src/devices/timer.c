@@ -104,7 +104,7 @@ timer_sleep (int64_t ticks)
   struct list_elem * this_thread_elem = &(this_thread->elem);
   list_insert_ordered(&ready_queue, &this_thread_elem, timer_less_func, NULL);
   
-  //WMH: Put thread to sleep
+  //WMH: Put thread to sleep: sema down?
 }
 
 /* Compares the value of the sleep_tick in threads with list elements A and B, given
@@ -210,7 +210,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
     if(timer_ticks() >= next_thread->sleep_tick)
     {
       list_pop_front(&ready_queue)
-      //WMH: Start thread again
+      //WMH: Start thread again: sema up?
     }
   }
 }
