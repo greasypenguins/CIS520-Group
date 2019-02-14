@@ -32,9 +32,8 @@ static void real_time_delay (int64_t num, int32_t denom);
 
 static bool timer_less_func (const struct list_elem *, const struct list_elem *, void *);
 
-static struct list ready_queue;
+static struct list sleeping_threads;
 static struct semaphore sleep_sema;
-//static struct lock ready_queue_lock;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
@@ -43,9 +42,8 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
-  list_init(&ready_queue);
+  list_init(&sleeping_threads);
   sema_init(&sleep_sema, 0);
-//  lock_init(&ready_queue_lock);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -98,37 +96,22 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
+  ASSERT(intr_get_level () == INTR_ON);
+
   enum intr_level old_level;
-//  printf( "Going to sleep 1 %lld\n", timer_ticks() );
-  //int64_t start = timer_ticks ();
+
   int64_t end = timer_ticks() + ticks;
 
-  ASSERT (intr_get_level () == INTR_ON);
-  //while (timer_elapsed (start) < ticks) 
-  //  thread_yield ();
-//  printf( "Going to sleep 2 %lld\n", timer_ticks() );
   struct thread * this_thread = thread_current();
   this_thread->sleep_tick = end;
-//  printf( "Going to sleep 3 %lld\n", timer_ticks() );
-  struct list_elem * this_thread_elem = &(this_thread->elem);
-//  while(lock_held_by_current_thread(&ready_queue_lock))
-//  {
-//    thread_yield();
-//  }
-  old_level = intr_disable ();
-//  lock_acquire(&ready_queue_lock);
-//  printf("Sleep tick: %lld", this_thread->sleep_tick);
-  list_insert_ordered(&ready_queue, this_thread_elem, timer_less_func, NULL);
-//  struct list_elem * thread_elem = list_front (&ready_queue);
-//  struct thread * next_thread = list_entry(thread_elem, struct thread, elem);
-//  printf("Sleep tick: %lld\n", next_thread->sleep_tick);
-//  lock_release(&ready_queue_lock);
-//  printf( "Going to sleep 4 %lld\n", timer_ticks() );
 
+  /* Disable interrupts because:
+     - Need to prevent interrupt handler from accessing sleeping_threads
+     - Need to disable before making thread go to sleep */
+  old_level = intr_disable();
+  list_insert_ordered(&sleeping_threads, &(this_thread->elem), timer_less_func, NULL);
   thread_block();
   intr_set_level(old_level);
-
-//  printf( "Going to sleep 5 %lld\n", timer_ticks() );
 }
 
 /* Compares the value of the sleep_tick in threads with list elements A and B, given
@@ -223,31 +206,19 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  //printf("Timer interrupt 1");
   ticks++;
   thread_tick ();
-  //printf("Timer interrupt 2");
-  if(//(!lock_held_by_current_thread(&ready_queue_lock))
-  //&& (lock_try_acquire(&ready_queue_lock)            )
-     (list_size(&ready_queue) > 0                    ))
+  if(list_size(&sleeping_threads) > 0)
   {
-//    printf("Timer interrupt 3 %lld", ticks);
-    struct list_elem * thread_elem = list_front(&ready_queue);
-    struct thread * next_thread = list_entry(thread_elem, struct thread, elem);
-    //printf("Timer interrupt 4");
-//    printf("Sleep tick: %lld\n", next_thread->sleep_tick);
+    struct thread * next_thread = list_entry(list_front(&sleeping_threads), struct thread, elem);
     if(ticks >= next_thread->sleep_tick)
     {
-//      printf("Timer interrupt 5");
-      list_pop_front(&ready_queue);
-//      printf("Timer interrupt 6");
+      list_pop_front(&sleeping_threads);
       enum intr_level old_level;
       old_level = intr_disable ();
       thread_unblock(next_thread);
       intr_set_level(old_level);
-//      printf("Timer interrupt 7\n");
     }
-   //lock_release(&ready_queue_lock);
   }
 }
 
