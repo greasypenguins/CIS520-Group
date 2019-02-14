@@ -99,17 +99,17 @@ void
 timer_sleep (int64_t ticks) 
 {
   enum intr_level old_level;
-  printf( "Going to sleep 1 %lld\n", timer_ticks() );
+//  printf( "Going to sleep 1 %lld\n", timer_ticks() );
   //int64_t start = timer_ticks ();
   int64_t end = timer_ticks() + ticks;
 
   ASSERT (intr_get_level () == INTR_ON);
   //while (timer_elapsed (start) < ticks) 
   //  thread_yield ();
-  printf( "Going to sleep 2 %lld\n", timer_ticks() );
+//  printf( "Going to sleep 2 %lld\n", timer_ticks() );
   struct thread * this_thread = thread_current();
   this_thread->sleep_tick = end;
-  printf( "Going to sleep 3 %lld\n", timer_ticks() );
+//  printf( "Going to sleep 3 %lld\n", timer_ticks() );
   struct list_elem * this_thread_elem = &(this_thread->elem);
 //  while(lock_held_by_current_thread(&ready_queue_lock))
 //  {
@@ -117,18 +117,18 @@ timer_sleep (int64_t ticks)
 //  }
   old_level = intr_disable ();
 //  lock_acquire(&ready_queue_lock);
-  printf("Sleep tick: %lld", this_thread->sleep_tick);
+//  printf("Sleep tick: %lld", this_thread->sleep_tick);
   list_insert_ordered(&ready_queue, this_thread_elem, timer_less_func, NULL);
-  struct list_elem * thread_elem = list_front (&ready_queue);
-  struct thread * next_thread = list_entry(thread_elem, struct thread, elem);
-  printf("Sleep tick: %lld\n", next_thread->sleep_tick);
+//  struct list_elem * thread_elem = list_front (&ready_queue);
+//  struct thread * next_thread = list_entry(thread_elem, struct thread, elem);
+//  printf("Sleep tick: %lld\n", next_thread->sleep_tick);
 //  lock_release(&ready_queue_lock);
-  printf( "Going to sleep 4 %lld\n", timer_ticks() );
+//  printf( "Going to sleep 4 %lld\n", timer_ticks() );
 
   thread_block();
   intr_set_level(old_level);
 
-  printf( "Going to sleep 5 %lld\n", timer_ticks() );
+//  printf( "Going to sleep 5 %lld\n", timer_ticks() );
 }
 
 /* Compares the value of the sleep_tick in threads with list elements A and B, given
@@ -232,7 +232,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
      (list_size(&ready_queue) > 0                    ))
   {
 //    printf("Timer interrupt 3 %lld", ticks);
-    struct list_elem * thread_elem = list_front (&ready_queue);
+    struct list_elem * thread_elem = list_front(&ready_queue);
     struct thread * next_thread = list_entry(thread_elem, struct thread, elem);
     //printf("Timer interrupt 4");
 //    printf("Sleep tick: %lld\n", next_thread->sleep_tick);
