@@ -208,12 +208,12 @@ timer_interrupt (struct intr_frame *args UNUSED)
   
   if(list_size(&ready_queue) > 0)
   {
-    struct list_elem * thread_elem = &(ready_queue.head)
+    struct list_elem * thread_elem = &(ready_queue.head);
     struct thread * next_thread = list_entry(thread_elem, struct thread, elem);
     
     if(timer_ticks() >= next_thread->sleep_tick)
     {
-      list_pop_front(&ready_queue)
+      list_pop_front(&ready_queue);
       //WMH: Start thread again: sema up?
       sema_up(&sleep_sema);
     }
