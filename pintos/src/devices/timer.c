@@ -210,14 +210,24 @@ timer_interrupt (struct intr_frame *args UNUSED)
   thread_tick ();
   if(list_size(&sleeping_threads) > 0)
   {
-    struct thread * next_thread = list_entry(list_front(&sleeping_threads), struct thread, elem);
-    if(ticks >= next_thread->sleep_tick)
+    enum intr_level old_level;
+    struct thread * next_thread;
+
+    next_thread = list_entry(list_front(&sleeping_threads), struct thread, elem);
+
+    while(next_thread->sleep_tick < ticks)
     {
       list_pop_front(&sleeping_threads);
-      enum intr_level old_level;
+
       old_level = intr_disable ();
       thread_unblock(next_thread);
       intr_set_level(old_level);
+      
+      if(list_size(&sleeping_threads) <= 0)
+      {
+        break;
+      }
+      next_thread = list_entry(list_front(&sleeping_threads), struct thread, elem);
     }
   }
 }
