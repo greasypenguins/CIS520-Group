@@ -109,18 +109,18 @@ timer_sleep (int64_t ticks)
      - Need to prevent interrupt handler from accessing sleeping_threads
      - Need to disable before making thread go to sleep */
   old_level = intr_disable();
-  list_insert_ordered(&sleeping_threads, &(this_thread->elem), timer_less_func, NULL);
+  list_insert_ordered(&sleeping_threads, &(this_thread->timer_elem), timer_less_func, NULL);
   thread_block();
   intr_set_level(old_level);
 }
 
-/* Compares the value of the sleep_tick in threads with list elements A and B, given
-   auxiliary data AUX.  Returns true if thread A's  is less than thread B's, or
-   false if A is greater than or equal to B. */
+/* Compares the value of the sleep_tick in threads with list elements A and B.
+   Returns true if thread A's sleep_tick is less than thread B's, or
+   false if thread A's sleep_tick is greater than or equal to B's. */
 static bool timer_less_func (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
-  struct thread * thread_a = list_entry(a, struct thread, elem);
-  struct thread * thread_b = list_entry(b, struct thread, elem);
+  struct thread * thread_a = list_entry(a, struct thread, timer_elem);
+  struct thread * thread_b = list_entry(b, struct thread, timer_elem);
   
   if(thread_a->sleep_tick < thread_b->sleep_tick)
   {
@@ -213,7 +213,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
     enum intr_level old_level;
     struct thread * next_thread;
 
-    next_thread = list_entry(list_front(&sleeping_threads), struct thread, elem);
+    next_thread = list_entry(list_front(&sleeping_threads), struct thread, timer_elem);
 
     while(next_thread->sleep_tick < ticks)
     {
@@ -227,7 +227,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
       {
         break;
       }
-      next_thread = list_entry(list_front(&sleeping_threads), struct thread, elem);
+      next_thread = list_entry(list_front(&sleeping_threads), struct thread, timer_elem);
     }
   }
 }
