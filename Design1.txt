@@ -32,9 +32,10 @@ FirstName LastName <email@k-state.edu>
 
 timer.c
 - Added static struct list ready_queue: A list of threads currently waiting
+- Added struct semaphore sleep_sema: Semaphore tokeep track of sleeping threads (????, Line 43)
 
 thread.h
-- Added int64_t sleep_tick: 
+- Added int64_t sleep_tick: Holds the number of computer ticks to wait before sleep
 
 ---- ALGORITHMS ----
 
