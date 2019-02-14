@@ -1,5 +1,6 @@
 #include "list.h"
 #include "../debug.h"
+#include <stdio.h>
 
 /* Our doubly linked lists have two header elements: the "head"
    just before the first element and the "tail" just after the
@@ -60,11 +61,13 @@ is_tail (struct list_elem *elem)
 void
 list_init (struct list *list)
 {
+//  printf("Initializing list");
   ASSERT (list != NULL);
   list->head.prev = NULL;
   list->head.next = &list->tail;
   list->tail.prev = &list->head;
   list->tail.next = NULL;
+//  printf("Done initializing list");
 }
 
 /* Returns the beginning of LIST.  */
@@ -81,7 +84,9 @@ list_begin (struct list *list)
 struct list_elem *
 list_next (struct list_elem *elem)
 {
+//  printf("Finding next element");
   ASSERT (is_head (elem) || is_interior (elem));
+//  printf("Done finding next element");
   return elem->next;
 }
 
@@ -248,9 +253,11 @@ list_push_back (struct list *list, struct list_elem *elem)
 struct list_elem *
 list_remove (struct list_elem *elem)
 {
+//  printf("Removing from list");
   ASSERT (is_interior (elem));
   elem->prev->next = elem->next;
   elem->next->prev = elem->prev;
+//  printf("Done removing from list");
   return elem->next;
 }
 
@@ -259,8 +266,10 @@ list_remove (struct list_elem *elem)
 struct list_elem *
 list_pop_front (struct list *list)
 {
+//  printf("Popping from front of list");
   struct list_elem *front = list_front (list);
   list_remove (front);
+//  printf("Done popping from front of list");
   return front;
 }
 
@@ -299,9 +308,10 @@ list_size (struct list *list)
 {
   struct list_elem *e;
   size_t cnt = 0;
-
+//  printf("Finding list size");
   for (e = list_begin (list); e != list_end (list); e = list_next (e))
     cnt++;
+//  printf("Done finding list size");
   return cnt;
 }
 
@@ -451,10 +461,11 @@ list_insert_ordered (struct list *list, struct list_elem *elem,
   ASSERT (list != NULL);
   ASSERT (elem != NULL);
   ASSERT (less != NULL);
-
+//  printf("Inserting into list");
   for (e = list_begin (list); e != list_end (list); e = list_next (e))
     if (less (elem, e, aux))
       break;
+//  printf("Done inserting into list");
   return list_insert (e, elem);
 }
 
