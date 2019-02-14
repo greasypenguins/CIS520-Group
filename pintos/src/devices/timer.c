@@ -31,6 +31,7 @@ static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
 static struct list ready_queue;
+static struct semaphore sleep_sema;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
@@ -40,7 +41,6 @@ timer_init (void)
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
   list_init(&ready_queue);
-  struct semaphore sleep_sema;
   sema_init(&sleep_sema, 0);
 }
 
