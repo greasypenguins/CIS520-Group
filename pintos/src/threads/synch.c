@@ -221,6 +221,13 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  if(!lock_held_by_current_thread (lock)) { //if thread applying for lock does not hold lock
+    if(thread_get_donated_priority(lock->holder) < thread_get_priority()) { //if the thread holding the lock has priority lower than current thread's priority
+       
+       
+    }
+  }
+
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 }

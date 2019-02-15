@@ -390,13 +390,13 @@ thread_get_donated_priority(struct thread * t)
   {
     struct thread * d = list_entry(list_front(&(t->donors_list)), struct thread, donor_elem);
     int donor_priority = thread_get_donated_priority(d);
-    if(donor_priority >= t->priority)
+    if(donor_priority >= t->priority) //compare highest donor priority to this thread's priority
     {
-      return donor_priority;
+      return donor_priority; //return that donor priority if true
     }
   }
 
-  return t->priority;
+  return t->priority; //return this thread priority if donor list is empty or highest donor is lower than this threads priority
 }
 
 /* Sets the current thread's nice value to NICE. */
