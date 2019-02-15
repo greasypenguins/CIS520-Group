@@ -223,13 +223,14 @@ lock_acquire (struct lock *lock)
 
   if(!lock_held_by_current_thread (lock)) { //if thread applying for lock does not hold lock
     if(thread_get_donated_priority(lock->holder) < thread_get_priority()) { //if the thread holding the lock has priority lower than current thread's priority
-       
-       
+       list_insert_ordered (&(lock->holder->donors_list), &(thread_current()->donor_elem), &donor_priority_less_func, NULL); //insert thread into the priority donors list of lock holder thread  
     }
   }
 
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
+
+  list_remove (&(thread_current()->donor_elem)); //now that the lock has been passed, remove thyself from donor list
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
