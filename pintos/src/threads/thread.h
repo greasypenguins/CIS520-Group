@@ -89,6 +89,7 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list donors_list;            /* List of priority donors */
+    struct list_elem donor_elem;
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Owned by timer.c */

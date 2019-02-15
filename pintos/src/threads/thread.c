@@ -388,7 +388,7 @@ thread_get_donated_priority(struct thread * t)
      this thread's priority, then return the highest donor priority */
   if(!list_empty(&(t->donors_list)))
   {
-    struct thread * d = list_entry(list_front(&(t->donors_list)), struct thread, elem);
+    struct thread * d = list_entry(list_front(&(t->donors_list)), struct thread, donor_elem);
     int donor_priority = thread_get_donated_priority(d);
     if(donor_priority >= t->priority)
     {

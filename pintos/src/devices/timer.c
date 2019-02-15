@@ -215,7 +215,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
     next_thread = list_entry(list_front(&sleeping_threads), struct thread, timer_elem);
 
-    while(next_thread->sleep_tick < ticks)
+    while(next_thread->sleep_tick < ticks + 1)
     {
       list_pop_front(&sleeping_threads);
 
