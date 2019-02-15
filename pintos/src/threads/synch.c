@@ -225,7 +225,8 @@ lock_acquire (struct lock *lock)
 
   if(lock->holder != NULL) { //if another thread holds the lock
     if(thread_get_donated_priority(lock->holder) < thread_get_priority()) { //if the thread holding the lock has priority lower than current thread's priority
-       list_insert_ordered (&(lock->holder->donors_list), t_donor_elem, &donor_priority_less_func, NULL); //insert thread into the priority donors list of lock holder thread  
+       list_insert_ordered (&(lock->holder->donors_list), t_donor_elem, &donor_priority_less_func, NULL); //insert thread into the priority donors list of lock holder thread
+       thread_reorder_ready_list(lock->holder);
     }
   }
 
@@ -236,6 +237,7 @@ lock_acquire (struct lock *lock)
   if(t_donor_elem->prev != NULL && t_donor_elem->next != NULL)
   {
     list_remove(&(thread_current()->donor_elem)); //now that the lock has been passed, remove thyself from donor list
+    //WMH: reorder here?
   }
 }
 

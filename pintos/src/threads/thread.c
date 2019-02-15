@@ -373,6 +373,17 @@ thread_set_priority (int new_priority)
   }
 }
 
+/* Reorders a thread's position in ready_list if necessary */
+void
+thread_reorder_ready_list(struct thread * t)
+{
+  if(!list_empty(&ready_list))
+  {
+    list_remove(&(t->elem));
+    list_insert_ordered(&ready_list, &(t->elem), priority_less_func, NULL);
+  }
+}
+
 /* Returns the current thread's priority or highest donated priority. */
 int
 thread_get_priority (void)
