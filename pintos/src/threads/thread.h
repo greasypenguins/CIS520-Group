@@ -88,9 +88,11 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    struct list donors_list;            /* List of priority donors */
-    struct list_elem donor_elem;
     struct list_elem allelem;           /* List element for all threads list. */
+    
+    struct list_elem donor_elem;
+    
+    struct list locks_held;
 
     /* Owned by timer.c */
     struct list_elem timer_elem;        /* List element */
@@ -112,6 +114,8 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+static bool priority_less_func(const struct list_elem *, const struct list_elem *, void *);
 
 void thread_init (void);
 void thread_start (void);

@@ -71,8 +71,6 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-static bool priority_less_func (const struct list_elem *, const struct list_elem *, void *);
-
 /* Compares the value of the priority in threads with list elements A and B.
    Returns true if thread A's priority is greater than thread B's, or
    false if thread A's priority is less than or equal to B's. Therefore,
@@ -81,7 +79,7 @@ static bool priority_less_func (const struct list_elem *, const struct list_elem
    (front) 3, 3, 3, 2, 2, 2, 1, 1, 1 (back)
    (front) 3, 3, 3, 2, 2, 2, X, 1, 1, 1 (back)
    This also creates a "round-robin" effect within each priority. */
-static bool priority_less_func (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+static bool priority_less_func(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   struct thread * thread_a = list_entry(a, struct thread, elem);
   struct thread * thread_b = list_entry(b, struct thread, elem);
@@ -225,6 +223,11 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+
+  if(thread_get_donated_priority(t) > thread_get_priority())
+  {
+    thread_yield();
+  }
 
   return tid;
 }
@@ -377,7 +380,7 @@ thread_set_priority (int new_priority)
 void
 thread_reorder_ready_list(struct thread * t)
 {
-  if(!list_empty(&ready_list))
+  if(!list_empty(&ready_list)) //WMH: probably check if t->elem is in ready_list instead of just checking if ready_list isn't empty
   {
     list_remove(&(t->elem));
     list_insert_ordered(&ready_list, &(t->elem), priority_less_func, NULL);
@@ -395,19 +398,37 @@ thread_get_priority (void)
 int
 thread_get_donated_priority(struct thread * t)
 {
-  /* If there are donors and the highest donor priority is greater than
-     this thread's priority, then return the highest donor priority */
-  if(!list_empty(&(t->donors_list)))
+  struct lock * my_lock;
+  struct list_elem * my_lock_elem;
+  struct thread * my_thread;
+  struct list_elem * my_thread_elem;
+  
+  int priority = t->priority;
+  int my_thread_priority;
+  
+  if(!list_empty(&(t->locks_held)))
   {
-    struct thread * d = list_entry(list_front(&(t->donors_list)), struct thread, donor_elem);
-    int donor_priority = thread_get_donated_priority(d);
-    if(donor_priority >= t->priority) //compare highest donor priority to this thread's priority
+    for(my_lock_elem = list_front(&(t->locks_held)); my_lock_elem != list_end(&(t->locks_held)); my_lock_elem = list_next(my_lock_elem))
     {
-      return donor_priority; //return that donor priority if true
+      my_lock = list_entry(my_lock_elem, struct lock, lock_elem);
+      
+      if(!list_empty(&(my_lock->donor_list)))
+      {
+        for(my_thread_elem = list_front(&(my_lock->donor_list)); my_thread_elem != list_end(&(my_lock->donor_list)); my_thread_elem = list_next(my_thread_elem))
+        {
+          my_thread = list_entry(my_thread_elem, struct thread, donor_elem);
+          
+          my_thread_priority = thread_get_donated_priority(my_thread);
+          if(my_thread_priority > priority)
+          {
+            priority = my_thread_priority;
+          }
+        }
+      }
     }
   }
-
-  return t->priority; //return this thread priority if donor list is empty or highest donor is lower than this threads priority
+  
+  return priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -528,7 +549,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-  list_init(&(t->donors_list));
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

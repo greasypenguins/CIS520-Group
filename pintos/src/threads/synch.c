@@ -32,31 +32,6 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
-static bool donor_priority_less_func (const struct list_elem *, const struct list_elem *, void *);
-
-/* Compares the value of the priority in threads with list elements A and B.
-   Returns true if thread A's priority is greater than thread B's, or
-   false if thread A's priority is less than or equal to B's. Therefore,
-   this is actually a "more" function. This way thread X with priority 2
-   would be inserted at this spot in this list:
-   (front) 3, 3, 3, 2, 2, 2, 1, 1, 1 (back)
-   (front) 3, 3, 3, 2, 2, 2, X, 1, 1, 1 (back)
-   This also creates a "round-robin" effect within each priority. */
-static bool donor_priority_less_func (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
-{
-  struct thread * thread_a = list_entry(a, struct thread, elem);
-  struct thread * thread_b = list_entry(b, struct thread, elem);
-  
-  if(thread_get_donated_priority(thread_a) > thread_get_donated_priority(thread_b))
-  {
-    return(true);
-  }
-  else
-  {
-    return(false);
-  }
-}
-
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -221,24 +196,19 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  struct list_elem * t_donor_elem = &(thread_current()->donor_elem);
+  list_insert_ordered (lock->donor_list, &(thread_current()->donor_elem), priority_less_func, NULL);
 
-  if(lock->holder != NULL) { //if another thread holds the lock
-    if(thread_get_donated_priority(lock->holder) < thread_get_priority()) { //if the thread holding the lock has priority lower than current thread's priority
-       list_insert_ordered (&(lock->holder->donors_list), t_donor_elem, &donor_priority_less_func, NULL); //insert thread into the priority donors list of lock holder thread
-       thread_reorder_ready_list(lock->holder);
-    }
+  if(lock->holder != NULL)
+  {
+    thread_reorder_ready_list(&(lock->holder))
   }
 
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 
-  /* If this thread is donating priority to another thread */
-  if(t_donor_elem->prev != NULL && t_donor_elem->next != NULL)
-  {
-    list_remove(&(thread_current()->donor_elem)); //now that the lock has been passed, remove thyself from donor list
-    //WMH: reorder here?
-  }
+  list_push_front(&(thread_current()->locks_held), &(lock->lock_elem));
+  list_remove(&(thread_current()->donor_elem));
+  
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -273,6 +243,7 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   lock->holder = NULL;
+  list_remove(&(thread_current()->locks_held));
   sema_up (&lock->semaphore);
 }
 
