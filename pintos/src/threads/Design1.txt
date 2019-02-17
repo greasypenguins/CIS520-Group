@@ -164,13 +164,18 @@ there is a lock around the function’s critical section, forcing sequential acc
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
-This design was chosen because of the ease of referencing the locks and threads, and it allowed us to calculate values with 
-either references to the lock or the thread. It also allowed us to retrieve the maximum priority of the lock holding thread 
-in a simple manner.
+This design was chosen because of the ease of referencing the locks and threads, and it allowed us
+to calculate values with either references to the lock or the thread. It also allowed us to retrieve
+the maximum priority of the lock-holding thread in a simple manner. We previously stored a list of
+all donor threads in each donee (lock-holding) thread's struct thread, with nothing new stored in
+each struct lock. However, this became an issue when releasing locks and trying to reshuffle the
+donors around, among numerous other problems, causing us to start over on priority donation.
 
 
               ADVANCED SCHEDULER [EXTRA CREDIT]
               =================================
+
+We didn't attempt the extra credit.
 
 ---- DATA STRUCTURES ----
 
