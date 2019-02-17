@@ -64,9 +64,9 @@ sema_down (struct semaphore *sema)
   ASSERT (sema != NULL);
   ASSERT (!intr_context ());
 
-
   old_level = intr_disable ();
-  while (sema->value == 0)  		/* While the sema is 0, sorts the current thread into its waitlist by priority. */
+  /* While the sema is 0, sorts the current thread into its waitlist by priority. */
+  while (sema->value == 0)
     {
       list_insert_ordered(&(sema->waiters), &(thread_current()->elem), priority_less_func, NULL);
       thread_block ();
@@ -211,13 +211,19 @@ lock_acquire (struct lock *lock)
 
   old_level = intr_disable();
 
-  list_insert_ordered(&(lock->donor_list), &(t->donor_elem), donor_priority_less_func, NULL);  /* Inserts a thread's element into the donor list when it is donating to the thread currently holding the lock. */
-  t->waiting_on_lock = lock; 		/* Changes the lock element to show the thread is locked. */
+  /* Insert a thread's element into the donor list when it is
+     donating to the thread currently holding the lock. */
+  list_insert_ordered(&(lock->donor_list), &(t->donor_elem), donor_priority_less_func, NULL);
+
+  /* Change the lock element to show the thread is locked. */
+  t->waiting_on_lock = lock;
 
   if(lock->holder != NULL)
   {
-    thread_recalculate_donated_priority(lock->holder);  /* Recalculates the priority of the current holder. */
-    thread_reorder_ready_list(lock->holder);            /* Uses the new priority to move it up the ready list. */
+    /* Recalculate the priority of the current holder. */
+    thread_recalculate_donated_priority(lock->holder);
+    /* Use the new priority to move it up the ready list. */
+    thread_reorder_ready_list(lock->holder);
   }
 
   intr_set_level(old_level);
@@ -227,10 +233,12 @@ lock_acquire (struct lock *lock)
   old_level = intr_disable();
   lock->holder = t;
 
-  list_push_front(&(t->locks_held), &(lock->lock_elem));    /* Adds the current lock to the holding thread's list. */
+  /* Add the current lock to the holding thread's list. */
+  list_push_front(&(t->locks_held), &(lock->lock_elem));
   list_remove(&(t->donor_elem));
 
-  t->waiting_on_lock = NULL;       /* No longer waiting on lock. */
+  /* No longer waiting on lock. */
+  t->waiting_on_lock = NULL;
 
   intr_set_level(old_level);
 }
@@ -281,7 +289,9 @@ lock_release (struct lock *lock)
 
   sema_up (&lock->semaphore);
 
-  if(!list_empty(&(lock->donor_list)))     /* If the lock has donors, find the donating threads using it's element and compare it's priority to the current thread. */
+  /* If the lock has donors, find the donating threads using it's element
+     and compare it's priority to the current thread. */
+  if(!list_empty(&(lock->donor_list)))
   {
     old_level = intr_disable();
     struct list_elem * donor_thread_elem = list_front(&(lock->donor_list));
@@ -289,7 +299,8 @@ lock_release (struct lock *lock)
 
     intr_set_level(old_level);
 
-    if(thread_get_donated_priority(donor_thread) > thread_get_priority()) /* If it's priority is higher, yield the current thread. */
+    /* If the highest priority donor has higher priority, yield the current thread. */
+    if(thread_get_donated_priority(donor_thread) > thread_get_priority())
     {
       thread_yield();
     }

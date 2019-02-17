@@ -101,19 +101,22 @@ timer_sleep (int64_t ticks)
 
   enum intr_level old_level;
 
-  int64_t end = timer_ticks() + ticks;  /* Calculates the tick the thread should sleep until. */
+  /* Calculates the tick the thread should sleep until. */
+  int64_t end = timer_ticks() + ticks;
 
-  struct thread * this_thread = thread_current();  /* Designates the current thread and assigns sleep_tick to the calculated value. */
+  /* Get the current thread and assigns sleep_tick to the calculated value. */
+  struct thread * this_thread = thread_current();
   this_thread->sleep_tick = end;
 
   /* Disable interrupts because:
      - Need to prevent interrupt handler from accessing sleeping_threads
      - Need to disable before making thread go to sleep */
   old_level = intr_disable();
-  lock_acquire(&sleep_lock);        /* Lock to prevent race conditions. */
-  list_insert_ordered(&sleeping_threads, &(this_thread->timer_elem), timer_less_func, NULL);  /*Insert the sleeping thread into a sorted list. */
-  lock_release(&sleep_lock);        /* Release lock. */
-  thread_block(); 	/* Block the thread to put it to sleep. */
+  lock_acquire(&sleep_lock); /* Lock to prevent race conditions. */
+  /*Insert the sleeping thread into a sorted list. */
+  list_insert_ordered(&sleeping_threads, &(this_thread->timer_elem), timer_less_func, NULL);
+  lock_release(&sleep_lock); /* Release lock. */
+  thread_block(); /* Block the thread to put it to sleep. */
   intr_set_level(old_level);
 }
 
@@ -122,10 +125,12 @@ timer_sleep (int64_t ticks)
    false if thread A's sleep_tick is greater than or equal to B's. */
 static bool timer_less_func (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
-  struct thread * thread_a = list_entry(a, struct thread, timer_elem); 		/* Create two structures from the received data. */
+  /* Convert the list_elems to threads. */
+  struct thread * thread_a = list_entry(a, struct thread, timer_elem);
   struct thread * thread_b = list_entry(b, struct thread, timer_elem);
 
-  if(thread_a->sleep_tick < thread_b->sleep_tick)     /* Compare them and return a boolean denoting which value was higher. */
+  /* Compare them and return true if thread a will wake up before thread b. */
+  if(thread_a->sleep_tick < thread_b->sleep_tick)
   {
     return(true);
   }
@@ -212,26 +217,35 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-  if(list_size(&sleeping_threads) > 0)         	/* If there is a sleeping thread. */
+  
+  /* If there is a sleeping thread. */
+  if(list_size(&sleeping_threads) > 0)
   {
     enum intr_level old_level;
-    struct thread * next_thread;                /* Initialize the next thread. */
+    struct thread * next_thread;
 
+    /* Get the next sleeping thread to wake up. */
     next_thread = list_entry(list_front(&sleeping_threads), struct thread, timer_elem);
 
-    while(next_thread->sleep_tick < ticks + 1)  /* While there is a thread that will awake next turn. */
+    /* While there is a thread to wake up now */
+    while(next_thread->sleep_tick < ticks + 1)
     {
-      list_pop_front(&sleeping_threads);   	/* Remove it from the list. */
+      /* Remove thread from sleeping thread list. */
+      list_pop_front(&sleeping_threads);
 
+      /* Unblock thread. */
       old_level = intr_disable ();
-      thread_unblock(next_thread);              /* Unblock it. */
+      thread_unblock(next_thread);
       intr_set_level(old_level);
 
-      if(list_size(&sleeping_threads) <= 0)     /* Check that the list is not empty. */
+      /* If the list is now empty, stop checking for threads to wake up. */
+      if(list_size(&sleeping_threads) <= 0)
           {
         break;
       }
-      next_thread = list_entry(list_front(&sleeping_threads), struct thread, timer_elem);   /* Loop to the next thread in the list. */
+      
+      /* Get the next sleeping thread to wake up. */
+      next_thread = list_entry(list_front(&sleeping_threads), struct thread, timer_elem);
     }
   }
 }
