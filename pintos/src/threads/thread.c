@@ -389,9 +389,8 @@ thread_set_priority (int new_priority)
 void thread_reorder_ready_list(struct thread * t)
 {
   //printf("thread_reorder_ready_list()\n");
-  if((!list_empty(&ready_list)) //WMH: probably check if t->elem is in ready_list instead of just checking if ready_list isn't empty
-  && ((t->elem).prev != NULL  )
-  && ((t->elem).next != NULL  ))
+  if((!list_empty(&ready_list))
+  && (t->status = THREAD_READY))
   {
     list_remove(&(t->elem));
     list_insert_ordered(&ready_list, &(t->elem), priority_less_func, NULL);
@@ -434,6 +433,7 @@ void thread_recalculate_donated_priority(struct thread * t)
   
   t->donated_priority = 0;
   
+  /* Check all locks the thread holds to find donated priorities */
   if(!list_empty(&(t->locks_held)))
   {
     for(my_lock_elem = list_front(&(t->locks_held)); my_lock_elem != list_end(&(t->locks_held)); my_lock_elem = list_next(my_lock_elem))
@@ -452,6 +452,18 @@ void thread_recalculate_donated_priority(struct thread * t)
         }
       }
     }
+  }
+  
+  /* If we are donating (waiting on a lock) */
+  if(t->waiting_on_lock != NULL)
+  {
+    /* Reorder our spot in the donation list */
+    list_remove(&(t->donor_elem));
+    list_insert_ordered(&(t->waiting_on_lock->donor_list), &(t->donor_elem), priority_less_func, NULL);
+    
+    /* Recalculate the priority of the lock holder */
+    thread_recalculate_donated_priority(t->waiting_on_lock->holder);
+    thread_reorder_ready_list(t->waiting_on_lock->holder);
   }
 }
 
@@ -575,6 +587,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   t->donated_priority = priority;
   list_init(&(t->locks_held));
+  t->waiting_on_lock = NULL;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

@@ -93,6 +93,7 @@ struct thread
     
     /* Used by synch.c */
     struct list_elem donor_elem;
+    struct lock * waiting_on_lock;
     struct list locks_held;
 
     /* Owned by timer.c */
