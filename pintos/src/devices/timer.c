@@ -33,7 +33,6 @@ static void real_time_delay (int64_t num, int32_t denom);
 static bool timer_less_func (const struct list_elem *, const struct list_elem *, void *);
 
 static struct list sleeping_threads;
-static struct semaphore sleep_sema;
 static struct lock sleep_lock;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
