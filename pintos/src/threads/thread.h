@@ -118,6 +118,7 @@ struct thread
 extern bool thread_mlfqs;
 
 bool priority_less_func(const struct list_elem *, const struct list_elem *, void *);
+bool donor_priority_less_func(const struct list_elem *, const struct list_elem *, void *);
 
 void thread_init (void);
 void thread_start (void);

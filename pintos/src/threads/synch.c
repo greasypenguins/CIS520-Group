@@ -120,7 +120,7 @@ sema_up (struct semaphore *sema)
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters))
   {
-//    list_sort(&(sema->waiters), priority_less_func, NULL); //WMH: Probably unnecessary
+    list_sort(&(sema->waiters), priority_less_func, NULL); //WMH: Probably unnecessary
     thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
   }
   sema->value++;
@@ -201,16 +201,45 @@ void
 lock_acquire (struct lock *lock)
 {
   enum intr_level old_level;
-  struct thread * t = thread_current();
+  struct thread * t = thread_current(); //WMH: thread_current()???
+
+//  struct thread * donor_thread; //WMH: Delete this
+//  struct list_elem * donor_thread_elem; //WMH: Delete this
+//  int donor_thread_priority; //WMH: Delete this
 
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  old_level = intr_disable (); //WMH: Might be unnecessary
-  //printf("lock_acquire()\n");
+/*  if(t->tid == 3 || t->tid == 4) //WMH: Remove this whole section
+  {
+    donor_thread_priority = 999;
+  
+    if(!list_empty(&(lock->donor_list)))
+    {
+      donor_thread_elem = list_front(&(lock->donor_list));
+      donor_thread = list_entry(donor_thread_elem, struct thread, donor_elem);
+      donor_thread_priority = thread_get_donated_priority(donor_thread);
+    }
+    
+    printf("front of list dp: %d", donor_thread_priority);
+  }*/
 
-  list_insert_ordered(&(lock->donor_list), &(t->donor_elem), priority_less_func, NULL);
+  old_level = intr_disable(); //WMH: Might be unnecessary
+  //printf("lock_acquire() %d\n", t->tid);
+
+  list_insert_ordered(&(lock->donor_list), &(t->donor_elem), donor_priority_less_func, NULL);
+//  if(t->tid == 1 || t->tid == 3 || t->tid == 4) //WMH: Remove this whole section
+//  {
+//    if(!list_empty(&(lock->donor_list)))
+//    {
+//      donor_thread_elem = list_front(&(lock->donor_list));
+//      donor_thread = list_entry(donor_thread_elem, struct thread, donor_elem);
+//      donor_thread_priority = thread_get_donated_priority(donor_thread);
+//    }
+//    
+//    printf("front of list dp: %d", donor_thread_priority);
+//  }
   t->waiting_on_lock = lock;
 
   //printf("lock_acquire(): 2\n");
@@ -221,8 +250,8 @@ lock_acquire (struct lock *lock)
     thread_recalculate_donated_priority(lock->holder);
     thread_reorder_ready_list(lock->holder);
   }
-  
-  //printf("lock_acquire(): 3\n");
+
+//  printf("lock_acquire(): 3\n");
 //  if(!list_empty(&(lock->donor_list)))
 //  {
 //    while(thread_get_priority() < thread_get_donated_priority(list_entry(list_front(&(lock->donor_list)), struct thread, donor_elem)))
@@ -231,11 +260,25 @@ lock_acquire (struct lock *lock)
 //    }
 //  }
 
-  intr_set_level (old_level); //WMH: Might be unnecessary
+  intr_set_level(old_level); //WMH: Might be unnecessary
+
+/*  if(t->tid == 3 || t->tid == 4) //WMH: Remove this whole section
+  {
+    donor_thread_priority = 999;
+  
+    if(!list_empty(&(lock->donor_list)))
+    {
+      donor_thread_elem = list_front(&(lock->donor_list));
+      donor_thread = list_entry(donor_thread_elem, struct thread, donor_elem);
+      donor_thread_priority = thread_get_donated_priority(donor_thread);
+    }
+    
+    printf("front of list dp: %d", donor_thread_priority);
+  }*/
 
   sema_down (&lock->semaphore);
 
-  old_level = intr_disable (); //WMH: Might be unnecessary
+  old_level = intr_disable(); //WMH: Might be unnecessary
   //printf("Got the lock\n");
   lock->holder = t;
 
@@ -244,9 +287,9 @@ lock_acquire (struct lock *lock)
   
   t->waiting_on_lock = NULL;
   
-  thread_recalculate_donated_priority(t);
-  intr_set_level (old_level); //WMH: Might be unnecessary
-  //printf("Lock acquired fully\n");
+  //thread_recalculate_donated_priority(t); //WMH: Might be unnecessary
+  intr_set_level(old_level); //WMH: Might be unnecessary
+  //printf("Lock acquired fully %d\n", t->tid);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -292,24 +335,24 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  old_level = intr_disable (); //WMH: Might be unnecessary
+  old_level = intr_disable(); //WMH: Might be unnecessary
 
   //printf("lock_release()\n");
   lock->holder = NULL;
   list_remove(&(lock->lock_elem));
   thread_recalculate_donated_priority(thread_current());
   //printf("Releasing lock\n");
-  intr_set_level (old_level); //WMH: Might be unnecessary 
+  intr_set_level(old_level); //WMH: Might be unnecessary 
 
   sema_up (&lock->semaphore);
 
   if(!list_empty(&(lock->donor_list)))
   {
-    old_level = intr_disable (); //WMH: Might be unnecessary
+    old_level = intr_disable(); //WMH: Might be unnecessary
     struct list_elem * donor_thread_elem = list_front(&(lock->donor_list));
     struct thread * donor_thread = list_entry(donor_thread_elem, struct thread, donor_elem);
 
-    intr_set_level (old_level); //WMH: Might be unnecessary
+    intr_set_level(old_level); //WMH: Might be unnecessary
     
     if(thread_get_donated_priority(donor_thread) > thread_get_priority())
     {

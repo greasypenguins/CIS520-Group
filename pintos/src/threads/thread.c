@@ -35,7 +35,7 @@ static struct thread *idle_thread;
 static struct thread *initial_thread;
 
 /* Lock used by allocate_tid(). */
-static struct lock tid_lock;
+//static struct lock tid_lock; //WMH: Might need to re-enable this
 
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame
@@ -71,7 +71,8 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-/* Compares the value of the priority in threads with list elements A and B.
+/* elem only!
+   Compares the value of the priority in threads with list elements A and B.
    Returns true if thread A's priority is greater than thread B's, or
    false if thread A's priority is less than or equal to B's. Therefore,
    this is actually a "more" function. This way thread X with priority 2
@@ -97,6 +98,31 @@ bool priority_less_func(const struct list_elem *a, const struct list_elem *b, vo
   }
 }
 
+/* donor_elem only!
+   Compares the value of the priority in threads with list elements A and B.
+   Returns true if thread A's priority is greater than thread B's, or
+   false if thread A's priority is less than or equal to B's. Therefore,
+   this is actually a "more" function. This way thread X with priority 2
+   would be inserted at this spot in this list:
+   (front) 3, 3, 3, 2, 2, 2, 1, 1, 1 (back)
+   (front) 3, 3, 3, 2, 2, 2, X, 1, 1, 1 (back)
+   This also creates a "round-robin" effect within each priority. */
+bool donor_priority_less_func(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  //printf("priority_less_func()\n");
+  struct thread * thread_a = list_entry(a, struct thread, donor_elem);
+  struct thread * thread_b = list_entry(b, struct thread, donor_elem);
+
+  if(thread_get_donated_priority(thread_a) > thread_get_donated_priority(thread_b))
+  {
+    return(true);
+  }
+  else
+  {
+    return(false);
+  }
+}
+
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -115,7 +141,7 @@ thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
-  lock_init (&tid_lock);
+//  lock_init (&tid_lock); //WMH: Might need to re-enable this
   list_init (&ready_list);
   list_init (&all_list);
 
@@ -389,8 +415,8 @@ thread_set_priority (int new_priority)
 void thread_reorder_ready_list(struct thread * t)
 {
   //printf("thread_reorder_ready_list()\n");
-  if((!list_empty(&ready_list))
-  && (t->status = THREAD_READY))
+  if((!list_empty(&ready_list) )
+  && (t->status == THREAD_READY))
   {
     list_remove(&(t->elem));
     list_insert_ordered(&ready_list, &(t->elem), priority_less_func, NULL);
@@ -401,7 +427,7 @@ void thread_reorder_ready_list(struct thread * t)
 int
 thread_get_priority (void)
 {
-  return thread_get_donated_priority(thread_current());
+  return thread_get_donated_priority(thread_current()); //WMH: thread_current()???
 }
 
 /* Returns any thread's priority or highest donated priority. */
@@ -448,18 +474,33 @@ void thread_recalculate_donated_priority(struct thread * t)
         
         if(donor_thread_priority > t->donated_priority)
         {
+          /*if(t->priority >= PRI_DEFAULT &&
+          thread_current()->priority >= PRI_DEFAULT &&
+          (t->tid == 1 || t->tid == 3 || t->tid == 4) &&
+          (thread_current()->tid == 1 || thread_current()->tid == 3 || thread_current()->tid == 4)) //WMH: Remove this whole section
+          {
+            printf("TID %d priority %d\n", t->tid, t->priority);
+            printf("Changing donated priority from %d to %d\n", t->donated_priority, donor_thread_priority);
+          }*/
+//          if(t->tid == 1 &&
+//             thread_current()->tid == 3) //WMH: Remove this whole section
+//          {
+//            printf("TID %d p %d dp %d\n", t->tid, t->priority, t->donated_priority);
+//            printf("Donor TID %d p %d dp %d\n", donor_thread->tid, donor_thread->priority, donor_thread->donated_priority);
+//            printf("Changing donated priority from %d to %d\n", t->donated_priority, donor_thread_priority);
+//          }
           t->donated_priority = donor_thread_priority;
         }
       }
     }
   }
-  
+
   /* If we are donating (waiting on a lock) */
   if(t->waiting_on_lock != NULL)
   {
     /* Reorder our spot in the donation list */
     list_remove(&(t->donor_elem));
-    list_insert_ordered(&(t->waiting_on_lock->donor_list), &(t->donor_elem), priority_less_func, NULL);
+    list_insert_ordered(&(t->waiting_on_lock->donor_list), &(t->donor_elem), donor_priority_less_func, NULL);
     
     /* Recalculate the priority of the lock holder */
     thread_recalculate_donated_priority(t->waiting_on_lock->holder);
@@ -585,7 +626,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-  t->donated_priority = priority;
+  t->donated_priority = 0;
   list_init(&(t->locks_held));
   t->waiting_on_lock = NULL;
 
@@ -694,12 +735,13 @@ schedule (void)
 static tid_t
 allocate_tid (void)
 {
+  enum intr_level old_level;
   static tid_t next_tid = 1;
   tid_t tid;
 
-  lock_acquire (&tid_lock);
+  old_level = intr_disable();
   tid = next_tid++;
-  lock_release (&tid_lock);
+  intr_set_level(old_level);
 
   return tid;
 }
