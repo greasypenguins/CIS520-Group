@@ -77,7 +77,8 @@ Interrupts are disabled through the critical section.
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> other designs that you considered?
 
-
+We chose this design because it was straightforward. It allowed us to block threads without making additional function 
+calls. Previous iterations required use of semaphores to block threads.
 
 
              PRIORITY SCHEDULING
@@ -151,6 +152,9 @@ There is a lock around the function’s critical section, forcing sequential acc
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
+This design was chosen because of the ease of referencing the locks and threads, and it allowed us to calculate values with 
+either references to the lock or the thread. It also allowed us to retrieve the maximum priority of the lock holding thread 
+in a simple manner.
 
 
               ADVANCED SCHEDULER [EXTRA CREDIT]
