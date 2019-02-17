@@ -48,15 +48,17 @@ timer.c:
 >> including the effects of the timer interrupt handler.
 
 When timer_sleep() is called, sleep_tick is calculated using timer_ticks() and the ticks 
-value to designate the tick that the thread should sleep until. The thread is then inserted into a sorted 
-list of other sleeping threads, sorted by closest wake time, and it is then blocked. 
-The interrupt handler checks the list every tick until a thread is intended to wake. It then loops through 
-the list removing valid threads and unblocking them until there are no more threads that are intended to wake.
+value to designate the tick that the thread should sleep until. The thread is then inserted into a
+sorted list of other sleeping threads, sorted by closest wake time, and it is then blocked. 
+The interrupt handler checks the list every tick until a thread is intended to wake. It then wakes
+threads that need to wake up until there are no more threads that are intended to wake.
 
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler? 
 
-Interrupts are disabled during unblocking and the sorted sleeping_threads list is only analyzed while there is a thread in it.
+Only the next thread to wake up is considered, rather than looking through all sleeping threads.
+This is accomplished by having an inherently sorted list. Threads are placed in the correct position
+outside of the interrupt handler, so no sorting occurs in the interrupt handler.
 
 
 ---- SYNCHRONIZATION ----
@@ -69,7 +71,7 @@ The critical section is locked, forcing threads to use it sequentially.
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
 
-Interrupts are disabled through the critical section.
+Interrupts are disabled through the critical section in timer_sleep().
 
 
 ---- RATIONALE ----
@@ -116,28 +118,37 @@ synch.h:
 
 >> B2: Explain the data structure used to track priority donation.
 
-Priority donation is tracked via a list of elements from threads that have donated. When a 
-thread’s priority is calculated, it refers to the highest priority in this list. List is in order of priority so highest is always in front. When a thread releases the lock, the list is emptied.
+Priority donation is tracked via a sorted list of threads that have donated. When a thread’s
+priority is calculated, it refers to the highest priority in this list. List is in order of priority
+so highest is always in front. When a thread acquires the lock, it stops donating, so it removes
+itself from the list. There are rare cases where a thread's priority can change after being added to
+the list, so list_sort() is called within sema_up().
 
 ---- ALGORITHMS ----
 
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
 
-The lists for threads waiting on a structure are always inserted by priority. After any insert, lists are resorted to guarentee correct ordering.
+The lists for threads waiting on a structure are always inserted ordered by priority. Some
+priorities can change after insertion, so in these cases the lists are resorted before use to
+guarantee correct ordering.
 
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
 
-When a thread attempts to acquire the lock, the thread's priority is first inserted into a donors list. The holder's lock 
-value is associated the current lock. The lock holder then has its donor priority list recalculated and reordered. Interrupts are turned off and semaphore is decremented and then the lock is passed to the thread that wanted to acquire it. The lock is then added to that thread's lock list and since the thread now has the lock, it is removed from any donors list. The thread is no longer waiting on the lock and interrupts are turned back on. 
+When a thread attempts to acquire the lock, the thread's priority is first inserted into a donors
+list. The holder's lock value is associated the current lock. The lock holder then has its donor
+priority list recalculated and reordered. Interrupts are turned off and semaphore is decremented and
+then the lock is passed to the thread that wanted to acquire it. The lock is then added to that
+thread's lock list and since the thread now has the lock, it is removed from any donors list. The
+thread is no longer waiting on the lock and interrupts are turned back on.
 
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
 
 When lock_release() is called, the donor list for the lock is checked for locks of higher priority 
-waiting. If this value is higher than the current thread’s priority, the current thread is 
-yielded so the lock may be accessed by the waiting thread.
+waiting. If this value is higher than the current thread’s priority, the current thread is yielded
+so the lock may be accessed by the waiting thread.
 
 ---- SYNCHRONIZATION ----
 
@@ -145,7 +156,8 @@ yielded so the lock may be accessed by the waiting thread.
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
 
-There is a lock around the function’s critical section, forcing sequential access.
+Yes. If other threads attempt to access the modified data, unexpected results could occur. Now,
+there is a lock around the function’s critical section, forcing sequential access.
 
 ---- RATIONALE ----
 
