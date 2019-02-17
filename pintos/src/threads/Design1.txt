@@ -80,6 +80,7 @@ Interrupts are disabled through the critical section.
 
 
 
+
              PRIORITY SCHEDULING
              ===================
 
