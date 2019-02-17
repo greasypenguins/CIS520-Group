@@ -79,17 +79,20 @@ static tid_t allocate_tid (void);
    (front) 3, 3, 3, 2, 2, 2, 1, 1, 1 (back)
    (front) 3, 3, 3, 2, 2, 2, X, 1, 1, 1 (back)
    This also creates a "round-robin" effect within each priority. */
-static bool priority_less_func(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+bool priority_less_func(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
+  //printf("priority_less_func()\n");
   struct thread * thread_a = list_entry(a, struct thread, elem);
   struct thread * thread_b = list_entry(b, struct thread, elem);
 
   if(thread_get_donated_priority(thread_a) > thread_get_donated_priority(thread_b))
   {
+    //printf("priority_less_func(): true\n");
     return(true);
   }
   else
   {
+    //printf("priority_less_func(): false\n");
     return(false);
   }
 }
@@ -363,24 +366,32 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
+  //printf("thread_set_priority()\n");
+  enum intr_level old_level = intr_disable (); //WMH: Might be unnecessary
+  
   struct thread * t = thread_current();
   t->priority = new_priority;
+  thread_recalculate_donated_priority(t);
+
 
   if(!list_empty(&ready_list))
   {
     struct thread * t_front = list_entry(list_front(&ready_list), struct thread, elem);
     if(thread_get_priority() < thread_get_donated_priority(t_front))
     {
-      thread_yield();
+      thread_yield(); //WMH: Should we actually do this here?
     }
   }
+  intr_set_level (old_level); //WMH: Might be unnecessary
 }
 
 /* Reorders a thread's position in ready_list if necessary */
-void
-thread_reorder_ready_list(struct thread * t)
+void thread_reorder_ready_list(struct thread * t)
 {
-  if(!list_empty(&ready_list)) //WMH: probably check if t->elem is in ready_list instead of just checking if ready_list isn't empty
+  //printf("thread_reorder_ready_list()\n");
+  if((!list_empty(&ready_list)) //WMH: probably check if t->elem is in ready_list instead of just checking if ready_list isn't empty
+  && ((t->elem).prev != NULL  )
+  && ((t->elem).next != NULL  ))
   {
     list_remove(&(t->elem));
     list_insert_ordered(&ready_list, &(t->elem), priority_less_func, NULL);
@@ -395,16 +406,33 @@ thread_get_priority (void)
 }
 
 /* Returns any thread's priority or highest donated priority. */
-int
-thread_get_donated_priority(struct thread * t)
+int thread_get_donated_priority(struct thread * t)
+{
+  //printf("thread_get_donated_priority()\n");
+  if(t->donated_priority > t->priority)
+  {
+    //printf("Donated is more\n");
+    return t->donated_priority;
+  }
+  else
+  {
+    //printf("Donated is not more\n");
+    return t->priority;
+  }
+}
+
+/* Recalculates a thread's donated priority */
+void thread_recalculate_donated_priority(struct thread * t)
 {
   struct lock * my_lock;
   struct list_elem * my_lock_elem;
-  struct thread * my_thread;
-  struct list_elem * my_thread_elem;
+  struct thread * donor_thread;
+  struct list_elem * donor_thread_elem;
+  int donor_thread_priority;
   
-  int priority = t->priority;
-  int my_thread_priority;
+  //printf("thread_recalculate_donated_priority()\n");
+  
+  t->donated_priority = 0;
   
   if(!list_empty(&(t->locks_held)))
   {
@@ -414,21 +442,17 @@ thread_get_donated_priority(struct thread * t)
       
       if(!list_empty(&(my_lock->donor_list)))
       {
-        for(my_thread_elem = list_front(&(my_lock->donor_list)); my_thread_elem != list_end(&(my_lock->donor_list)); my_thread_elem = list_next(my_thread_elem))
+        donor_thread_elem = list_front(&(my_lock->donor_list));
+        donor_thread = list_entry(donor_thread_elem, struct thread, donor_elem);
+        donor_thread_priority = thread_get_donated_priority(donor_thread);
+        
+        if(donor_thread_priority > t->donated_priority)
         {
-          my_thread = list_entry(my_thread_elem, struct thread, donor_elem);
-          
-          my_thread_priority = thread_get_donated_priority(my_thread);
-          if(my_thread_priority > priority)
-          {
-            priority = my_thread_priority;
-          }
+          t->donated_priority = donor_thread_priority;
         }
       }
     }
   }
-  
-  return priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -549,6 +573,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  t->donated_priority = priority;
+  list_init(&(t->locks_held));
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

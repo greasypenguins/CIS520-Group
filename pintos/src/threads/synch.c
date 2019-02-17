@@ -65,14 +65,19 @@ sema_down (struct semaphore *sema)
   ASSERT (sema != NULL);
   ASSERT (!intr_context ());
 
+  //printf("sema_down()\n");
+
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
       list_push_back (&sema->waiters, &thread_current ()->elem);
+      //printf("sema_down(): About to block thread\n");
       thread_block ();
+      //printf("sema_down(): Thread stopped being blocked\n");
     }
   sema->value--;
   intr_set_level (old_level);
+  //printf("End of sema_down())\n");
 }
 
 /* Down or "P" operation on a semaphore, but only if the
@@ -131,7 +136,7 @@ sema_self_test (void)
   struct semaphore sema[2];
   int i;
 
-  printf ("Testing semaphores...");
+  //printf ("Testing semaphores...");
   sema_init (&sema[0], 0);
   sema_init (&sema[1], 0);
   thread_create ("sema-test", PRI_DEFAULT, sema_test_helper, &sema);
@@ -140,7 +145,7 @@ sema_self_test (void)
       sema_up (&sema[0]);
       sema_down (&sema[1]);
     }
-  printf ("done.\n");
+  //printf ("done.\n");
 }
 
 /* Thread function used by sema_self_test(). */
@@ -178,6 +183,7 @@ lock_init (struct lock *lock)
   ASSERT (lock != NULL);
 
   lock->holder = NULL;
+  list_init(&(lock->donor_list));
   sema_init (&lock->semaphore, 1);
 }
 
@@ -196,19 +202,30 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  list_insert_ordered (lock->donor_list, &(thread_current()->donor_elem), priority_less_func, NULL);
+  //printf("lock_acquire()\n");
+
+  list_insert_ordered(&(lock->donor_list), &(thread_current()->donor_elem), priority_less_func, NULL);
+
+  //printf("lock_acquire(): 2\n");
 
   if(lock->holder != NULL)
   {
-    thread_reorder_ready_list(&(lock->holder))
+    //printf("Lock is currently held\n");
+    thread_recalculate_donated_priority(lock->holder);
+    thread_reorder_ready_list(lock->holder);
   }
+  
+  //printf("lock_acquire(): 3\n");
 
   sema_down (&lock->semaphore);
+  //printf("Got the lock\n");
   lock->holder = thread_current ();
 
   list_push_front(&(thread_current()->locks_held), &(lock->lock_elem));
   list_remove(&(thread_current()->donor_elem));
   
+  thread_recalculate_donated_priority(thread_current());
+  //printf("Lock acquired fully\n");
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -225,9 +242,19 @@ lock_try_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!lock_held_by_current_thread (lock));
 
+  //printf("lock_try_acquire()\n");
+
   success = sema_try_down (&lock->semaphore);
   if (success)
+  {
     lock->holder = thread_current ();
+    list_push_front(&(thread_current()->locks_held), &(lock->lock_elem));
+    //printf("Lock success\n");
+  }
+  else
+  {
+    //printf("Lock fail\n");
+  }
   return success;
 }
 
@@ -242,9 +269,13 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  //printf("lock_release()\n");
   lock->holder = NULL;
-  list_remove(&(thread_current()->locks_held));
+  list_remove(&(lock->lock_elem));
+  thread_recalculate_donated_priority(thread_current());
+  //printf("Releasing lock\n");
   sema_up (&lock->semaphore);
+  //printf("Lock released\n");
 }
 
 /* Returns true if the current thread holds LOCK, false
