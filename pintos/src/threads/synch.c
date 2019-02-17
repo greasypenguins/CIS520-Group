@@ -70,7 +70,7 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
-      list_push_back (&sema->waiters, &thread_current ()->elem);
+      list_insert_ordered(&(sema->waiters), &(thread_current()->elem), priority_less_func, NULL);
       //printf("sema_down(): About to block thread\n");
       thread_block ();
       //printf("sema_down(): Thread stopped being blocked\n");
@@ -198,10 +198,13 @@ lock_init (struct lock *lock)
 void
 lock_acquire (struct lock *lock)
 {
+//  enum intr_level old_level;
+
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+//  old_level = intr_disable (); //WMH: Might be unnecessary
   //printf("lock_acquire()\n");
 
   list_insert_ordered(&(lock->donor_list), &(thread_current()->donor_elem), priority_less_func, NULL);
@@ -216,8 +219,16 @@ lock_acquire (struct lock *lock)
   }
   
   //printf("lock_acquire(): 3\n");
+//  if(!list_empty(&(lock->donor_list)))
+//  {
+//    while(thread_get_priority() < thread_get_donated_priority(list_entry(list_front(&(lock->donor_list)), struct thread, donor_elem)))
+//    {
+//      thread_yield();
+//    }
+//  }
 
   sema_down (&lock->semaphore);
+
   //printf("Got the lock\n");
   lock->holder = thread_current ();
 
@@ -225,6 +236,7 @@ lock_acquire (struct lock *lock)
   list_remove(&(thread_current()->donor_elem));
   
   thread_recalculate_donated_priority(thread_current());
+//  intr_set_level (old_level); //WMH: Might be unnecessary
   //printf("Lock acquired fully\n");
 }
 
@@ -266,8 +278,12 @@ lock_try_acquire (struct lock *lock)
 void
 lock_release (struct lock *lock) 
 {
+//  enum intr_level old_level;
+  
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+
+//  old_level = intr_disable (); //WMH: Might be unnecessary
 
   //printf("lock_release()\n");
   lock->holder = NULL;
@@ -276,6 +292,7 @@ lock_release (struct lock *lock)
   //printf("Releasing lock\n");
   sema_up (&lock->semaphore);
   //printf("Lock released\n");
+//  intr_set_level (old_level); //WMH: Might be unnecessary
 }
 
 /* Returns true if the current thread holds LOCK, false
