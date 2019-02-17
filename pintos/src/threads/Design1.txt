@@ -7,8 +7,7 @@ CIS 520 - Programming Project #1
 
 Alexander Marney <abmarney@k-state.edu>
 Aswini Patro <apatro@k-state.edu>
- <@k-state.edu>
-
+Weston Harder <wmharder@k-state.edu>
 
 
 ---- PRELIMINARIES ----
