@@ -88,13 +88,13 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    int donated_priority;
+    int donated_priority;               /* Priority after donation from other threads */
     struct list_elem allelem;           /* List element for all threads list. */
     
     /* Used by synch.c */
-    struct list_elem donor_elem;
-    struct lock * waiting_on_lock;
-    struct list locks_held;
+    struct list_elem donor_elem;        /* List element for priority donation. */
+    struct lock * waiting_on_lock;      /* Lock pointer for locks the thread is waiting on. */
+    struct list locks_held;             /* List for the locks held by a thread. */
 
     /* Owned by timer.c */
     struct list_elem timer_elem;        /* List element */
@@ -117,8 +117,8 @@ struct thread
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
 
-bool priority_less_func(const struct list_elem *, const struct list_elem *, void *);
-bool donor_priority_less_func(const struct list_elem *, const struct list_elem *, void *);
+bool priority_less_func(const struct list_elem *, const struct list_elem *, void *); /* Function used in sorted list insertion */
+bool donor_priority_less_func(const struct list_elem *, const struct list_elem *, void *); /*Function used in sorted list function, utilizes donor element. */
 
 void thread_init (void);
 void thread_start (void);
@@ -143,11 +143,11 @@ void thread_yield (void);
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
 
-void thread_set_priority (int);
-void thread_reorder_ready_list(struct thread *);
-int thread_get_priority (void);
-int thread_get_donated_priority(struct thread *);
-void thread_recalculate_donated_priority(struct thread * t);
+void thread_set_priority (int); 			/* Sets a threads priority to a given value. */
+void thread_reorder_ready_list(struct thread *); 	/* Reorders the ready list after new priorities have been assigned. */
+int thread_get_priority (void); 			/* Gets the priority of the current thread. */
+int thread_get_donated_priority(struct thread *); 	/* Gets the donated priority of the current thread. */
+void thread_recalculate_donated_priority(struct thread * t);	/*Recalculates the total priority as a result of donation. */
 
 int thread_get_nice (void);
 void thread_set_nice (int);
