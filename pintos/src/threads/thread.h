@@ -90,7 +90,7 @@ struct thread
     int priority;                       /* Priority. */
     int donated_priority;               /* Priority after donation from other threads */
     struct list_elem allelem;           /* List element for all threads list. */
-    
+
     /* Used by synch.c */
     struct list_elem donor_elem;        /* List element for priority donation. */
     struct lock * waiting_on_lock;      /* Lock pointer for locks the thread is waiting on. */
@@ -102,6 +102,7 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+    int fd;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
