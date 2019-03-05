@@ -30,10 +30,10 @@ halt(void) {
 
 void
 exit (int status) {
-  struct thread t = thread_current();
-  t->status = status;
-  printf("Thread: %s, exit(%d)\n",t->name, status);
-  thread_exit();
+  struct thread t = thread_current(); //set thread t to current thread
+  t->status = status; //set kernel thread t's status to passed status
+  printf("Thread: %s, exit(%d)\n",t->name, status); //print full thread t name
+  thread_exit(); //exit the thread
 }
 
 pid_t
