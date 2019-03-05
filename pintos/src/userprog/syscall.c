@@ -10,10 +10,13 @@
 
 static void syscall_handler (struct intr_frame *);
 
+struct lock sys_lock; //lock to guarantee only one process is altering the file at a time
+
 void
 syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+  lock_init(&sys_lock); //initiate the lock for syscall
 }
 
 static void
@@ -92,6 +95,7 @@ write (int fd, const void *buffer, unsigned size) {
   else {
     return file_write(fd, buffer, size);
   }
+
 }
 
 void
