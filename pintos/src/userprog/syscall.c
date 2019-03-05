@@ -44,7 +44,9 @@ exec (const char *cmd_line) {
   if(*cmd_line == NULL) {
     return -1;
   }
+  lock_acquire(&sys_lock); // acquire lock before returning child PID
   pid_t new_id = process_execute(*cmd_line);
+  lock_release(&sys_lock);
   return new_id;
 }
 
@@ -55,11 +57,17 @@ wait (pid_t pid) {
 
 bool
 create (const char *file, unsigned initial_size) {
+  lock_acquire(&sys_lock); //added lock
+  bool file_status = filesys_create(file, initial_size);
+  lock_release(&sys_lock);
   return filesys_create(file, initial_size);
 }
 
 bool
 remove (const char *file) {
+  lock_acquire(&sys_lock); //added lock
+  bool removed = filesys_remove(file);
+  lock_release(&sys_lock);
   return filesys_remove(file);
 }
 
