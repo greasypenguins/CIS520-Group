@@ -311,7 +311,7 @@ list_index (struct list *list, int position)
   struct list_elem *temp = NULL; //list elem to return
   
   temp = list->head;
-  for (int i=0; i<position; i++) //iterate through the list till at index "position"
+  for (int i=0; i<=position; i++) //iterate through the list till at index "position"
   {
     temp = temp->next;
   }

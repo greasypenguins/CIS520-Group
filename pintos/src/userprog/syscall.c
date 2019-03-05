@@ -53,6 +53,7 @@ exec (const char *cmd_line) {
 int
 wait (pid_t pid) {
   process_wait(pid);
+  //What are we supposed to return here?
 }
 
 bool
@@ -73,23 +74,36 @@ remove (const char *file) {
 
 int
 open (const char *file) {
-  struct file f = filesys_open(file);
+  struct thread * t = thread_current();
+  struct file * f = filesys_open(file);
   if (f == NULL) {
     return -1;
   }
-  int out = current_thread()->fd;
-  current_thread()->fd++;
-  return out;
+
+  //If open_files is empty, assign this file's fd to be 2
+  if(list_empty(&(t->open_files)))
+  {
+    f->fd = 2;
+  }
+  //Else assign this file's fd to be 1 + the fd of the last file in open_files
+  else
+  {
+    struct list_elem * last_open_file_elem = list_back(&(t->open_files));
+    struct file * last_open_file = list_entry(last_open_file_elem, struct file, file_elem);
+    f->fd = last_open_file->fd + 1;
+  }
+
+  return f->fd;
 }
 
 int
 filesize (int fd) {
-  return (int)file_length(fd);
+  return (int)file_length(thread_get_open_file(fd));
 }
 
 int
 read (int fd, void *buffer, unsigned size) {
-  int data = file_read(fd, buffer, size);
+  int data = file_read(thread_get_open_file(fd), buffer, size);
   if (data == 0) {
     return -1;
   }
@@ -101,7 +115,7 @@ write (int fd, const void *buffer, unsigned size) {
   if (fd == 1) {
     return putbuf(); //implement correct call using this fucntion
   else {
-    return file_write(fd, buffer, size);
+    return file_write(thread_get_open_file(fd), buffer, size);
   }
 
 }
@@ -113,10 +127,14 @@ seek (int fd, unsigned position) {
 
 unsigned
 tell (int fd) {
-  //implemented alongside seek
+  //Get a reference to the file
+  struct file * open_file = thread_get_open_file(fd);
+
+  //Return the file's position
+  return open_file->pos;
 }
 
 void
 close (int fd) {
-  file_close(fd);
+  file_close(thread_get_open_file(fd));
 }
