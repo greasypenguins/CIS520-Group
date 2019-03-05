@@ -301,6 +301,24 @@ list_back (struct list *list)
   return list->tail.prev;
 }
 
+/* Returns the nth position element in LIST.
+   Undefined behavior if LIST is empty. */
+struct list_elem *
+list_index (struct list *list, int position)
+{
+  ASSERT (!list_empty (list));
+  ASSERT (list_size(list)>position); //make sure size of list is greater than desired index return
+  struct list_elem *temp = NULL; //list elem to return
+  
+  temp = list->head;
+  for (int i=0; i<position; i++) //iterate through the list till at index "position"
+  {
+    temp = temp->next;
+  }
+
+  return temp; //return nth index element
+}
+
 /* Returns the number of elements in LIST.
    Runs in O(n) in the number of elements. */
 size_t
