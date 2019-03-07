@@ -465,7 +465,47 @@ setup_stack (void **esp, int arg_count, char * arg_array)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
+      {
         *esp = PHYS_BASE -12;
+        /* A list of addresses to the values that are intially added to the stack.  */
+        uint32_t * arg__point[arg_count];
+
+        /* First add all of the command line arguments in descending order, including
+           the program name. */
+        for(int i = arg_count-1; i >= 0; i--)
+        {
+          /* Allocate enough space for the entire string (plus and extra byte for
+             '/0'). Copy the string to the stack, and add its reference to the array
+              of pointers. */
+          *esp = *esp - sizeof(char)*(strlen(arg_array[i])+1);
+          memcpy(*esp, arg_array[i], sizeof(char)*(strlen(arg_array[i])+1));
+          arg_point[i] = (uint32_t *)*esp;
+        }
+        /* Allocate space for & add the null sentinel. */
+        *esp -= 4;
+        (*(int *)(*esp)) = 0;
+
+        /* Push onto the stack each char* in arg_value_pointers[] (each of which
+           references an argument that was previously added to the stack). */
+        *esp -= 4;
+        for(int i = arg_count-1; i >= 0; i--)
+        {
+          (*(uint32_t **)(*esp)) = arg_point[i];
+          *esp -= 4;
+        }
+
+        /* Push onto the stack a pointer to the pointer of the address of the
+           first argument in the list of arguments. */
+        (*(uintptr_t **)(*esp)) += 4;
+
+        /* Push onto the stack the number of program arguments. */
+        *esp -= 4;
+        *(int *)(*esp) = arg_count;
+
+        /* Push onto the stack a fake return address, which completes stack initialization. */
+        *esp -= 4;
+        (*(int *)(*esp)) = 0;
+      }
       else
         palloc_free_page (kpage);
     }
