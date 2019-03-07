@@ -43,14 +43,19 @@ process_execute (const char *file_name)
 
   char * save_ptr;
   const char * delims = " ";
-  fname_tokens = strtok_r((char *)file_name, delims, save_ptr);
-  if (fname_tokens = NULL) {
+  fname_tokens = strtok_r((char *)file_name, delims, save_ptr); //tokenize name
+  if (fname_tokens = NULL) { //if no name, simply return
   	return -1;
   }
+
   //Create a new thread to execute FILE_NAME.
   tid = thread_create (fname_tokens[0], PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
-    palloc_free_page (fn_copy);
+  if (tid == TID_ERROR) {
+    palloc_free_page (fn_copy); //release filename copy if not able to create thread
+  }
+  else {
+    //add thread to thread's child list
+  }
   return tid;
 }
 
@@ -99,8 +104,13 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED)
 { //implement according to design document system call: wait method
-  while(1) {
-  }
+  //while(1) {
+  //}
+
+  //make sure child tid actually exists, return if not
+  //get the child thread based on passed in tid, find in current_thread()'s child_list
+  //wait on the child thread by sema_down()
+  //return pid for use in syscall's wait()
 }
 
 /* Free the current process's resources. */

@@ -108,6 +108,7 @@ struct thread
 
     /* Used by process.c */
     struct list child_list;             /* List of child processes */
+    int pid                             /* thread's file descriptor */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
