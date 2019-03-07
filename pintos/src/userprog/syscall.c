@@ -122,7 +122,17 @@ write (int fd, const void *buffer, unsigned size) {
 
 void
 seek (int fd, unsigned position) {
-  //set current file location marker to this value?
+  lock_acquire(&sys_lock); //added lock
+
+  if (list_empty(&thread_current()->open_files)) //immediately return if no open files
+  {
+    lock_release(&sys_lock);
+    return;
+  }
+
+  file_seek(thread_get_open_file(fd), position); //otherwise use thread_get_open_file() to return current file as arguement for file_seek()
+  lock_release(&sys_lock);
+  return;
 }
 
 unsigned
