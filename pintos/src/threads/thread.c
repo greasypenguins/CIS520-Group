@@ -521,27 +521,6 @@ thread_get_recent_cpu (void)
   return 0;
 }
 
-struct file *
-thread_get_open_file(int fd)
-{
-  struct list * open_files = &(thread_current()->open_files);
-  struct list_elem * open_file_elem;
-  struct file * open_file;
-
-  ASSERT(!list_empty(open_files));
-
-  for(open_file_elem = list_begin(open_files); open_file_elem != list_end(open_files); open_file_elem = list_next(open_file_elem))
-  {
-    open_file = list_entry(open_file_elem, struct file, file_elem);
-    if(open_file->fd == fd)
-    {
-      return open_file;
-    }
-  }
-
-  return NULL;
-}
-
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -630,7 +609,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   t->donated_priority = 0;
-  list_init(&(t->open_files));
   list_init(&(t->locks_held));
   t->waiting_on_lock = NULL;
 

@@ -4,10 +4,16 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/init.h"
+#include "threads/vaddr.h"
+#include "userprog/pagedir.h"
+#include "devices/shutdown.h"
+#include "devices/input.h"
+#include "threads/malloc.h"
 #include "userprog/process.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
-
+#include "threads/synch.h"
+#include "filesys/file.c"
 static void syscall_handler (struct intr_frame *);
 
 struct lock sys_lock; //lock to guarantee only one process is altering the file at a time
@@ -83,7 +89,7 @@ open (const char *file) {
   //If open_files is empty, assign this file's fd to be 2
   if(list_empty(&(t->open_files)))
   {
-    f->fd = 2;
+    f->fd =(int) 2;
   }
   //Else assign this file's fd to be 1 + the fd of the last file in open_files
   else
@@ -113,7 +119,11 @@ read (int fd, void *buffer, unsigned size) {
 int
 write (int fd, const void *buffer, unsigned size) {
   if (fd == 1) {
-    return putbuf(); //implement correct call using this fucntion
+    lock_acquire(&sys_lock);
+    putbuf(buffer,size); //implement correct call using this fucntion
+    lock_release(&sys_lock);
+    return size;
+  }
   else {
     return file_write(thread_get_open_file(fd), buffer, size);
   }

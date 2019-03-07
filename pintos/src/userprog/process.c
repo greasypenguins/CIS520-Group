@@ -217,7 +217,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, int arg_count, char * arg_array);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -246,7 +246,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
-  for (int arg_count = 0; arg_count < (sizeof(fname_tokens)/sizeof(fname_tokens[0]); arg_count++) {
+  for (int arg_count = 0; arg_count < (sizeof(fname_tokens)/sizeof(fname_tokens[0])); arg_count++) {
     arg_array[arg_count] = fname_tokens[arg_count];
   }
   file = filesys_open(arg_array[0]);
@@ -338,7 +338,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   success = true;
 
- done:
+  done:
   /* We arrive here whether the load is successful or not. */
   file_close (file);
   return success;
@@ -468,7 +468,7 @@ setup_stack (void **esp, int arg_count, char * arg_array)
       {
         *esp = PHYS_BASE -12;
         /* A list of addresses to the values that are intially added to the stack.  */
-        uint32_t * arg__point[arg_count];
+        uint32_t * arg_point[arg_count];
 
         /* First add all of the command line arguments in descending order, including
            the program name. */
