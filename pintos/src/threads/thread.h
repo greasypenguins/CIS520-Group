@@ -106,6 +106,9 @@ struct thread
     /* Used by syscall.c */
     struct list open_files;
 
+    /* Used by process.c */
+    struct list child_list;             /* List of child processes */
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
