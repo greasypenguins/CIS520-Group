@@ -40,7 +40,7 @@ halt(void) {
 void
 exit (int status) {
   struct thread t = thread_current(); //set thread t to current thread
-  t->status = status; //set kernel thread t's status to passed status
+  t->exit_status = status; //set kernel thread t's status to passed status
   printf("Thread: %s, exit(%d)\n",t->name, status); //print full thread t name
   thread_exit(); //exit the thread
 }
@@ -65,9 +65,9 @@ wait (pid_t pid) {
 bool
 create (const char *file, unsigned initial_size) {
   lock_acquire(&sys_lock); //added lock
-  bool file_status = filesys_create(file, initial_size);
+  bool create_file = filesys_create(file, initial_size);
   lock_release(&sys_lock);
-  return filesys_create(file, initial_size);
+  return create_file;
 }
 
 bool
@@ -75,7 +75,7 @@ remove (const char *file) {
   lock_acquire(&sys_lock); //added lock
   bool removed = filesys_remove(file);
   lock_release(&sys_lock);
-  return filesys_remove(file);
+  return removed(file);
 }
 
 int

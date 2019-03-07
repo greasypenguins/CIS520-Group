@@ -108,7 +108,9 @@ struct thread
 
     /* Used by process.c */
     struct list child_list;             /* List of child processes */
-
+    struct semaphore child_wait;        /* semaphore to wait on thread with */
+    int exit_status;                    /*status to be read when thread exits */
+    struct list_elem child_elem;        /*element for thread child process */
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */

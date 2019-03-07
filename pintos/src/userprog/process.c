@@ -111,6 +111,27 @@ process_wait (tid_t child_tid UNUSED)
   //get the child thread based on passed in tid, find in current_thread()'s child_list
   //wait on the child thread by sema_down()
   //return pid for use in syscall's wait()
+  struct thread *child_thread = NULL;
+  struct list_elem *temp;
+
+  if (list_empty(&thread_current()->child_list) {
+    return -1;
+  }
+
+  for (temp = list_front(&thread_current()->child_list); temp != NULL; temp = temp->next) {
+    struct thread *t = list_entry(temp, struct thread, child_elem);
+    if (t->tid == child_tid) {
+      child_thread = t;
+      break;
+    }
+  if(child_thread == NULL) {
+    return -1;
+  }
+
+  list_remove(&child_thread->child_elem);
+  sema_down(&child_thread->child_wait);
+
+  return child_thread->exit_status;
 }
 
 /* Free the current process's resources. */
