@@ -761,11 +761,11 @@ find_thread (tid_t tid)
   for (temp = list_front(&all_list); temp != NULL; temp = temp->next) {
     t = list_entry(temp, struct thread, allelem);
     if (t->tid == tid) {
-      break;
+      return t;
     }
   }
 
-  return t;
+  return NULL;
 }
 
 /* Offset of `stack' member within `struct thread'.

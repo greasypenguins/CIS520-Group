@@ -5,13 +5,13 @@ typedef int pid_t;
 
 void syscall_init (void);
 
-//static void syscall_handler (struct intr_frame *f UNUSED); //double check
+static void syscall_handler (struct intr_frame *f UNUSED); //double check
 void halt(void);
 void exit (int);
 pid_t exec (const char *cmd_line);
 int wait (pid_t);
-//bool create (const char *file, unsigned initial_size);
-//bool remove (const char *file);
+bool create (const char *file, unsigned initial_size);
+bool remove (const char *file);
 int open (const char *file);
 int filesize (int);
 int read (int, void *buffer, unsigned size);

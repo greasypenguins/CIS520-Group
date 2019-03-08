@@ -43,9 +43,9 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   char * save_ptr;
-  const char * delims = " ";
-  fname_tokens = strtok_r((char *)file_name, delims, save_ptr); //tokenize name
-  if (fname_tokens = NULL) { //if no name, simply return
+  const char delims = " ";
+  fname_tokens = strtok_r((char *)file_name, delims, &save_ptr); //tokenize name
+  if (fname_tokens == NULL) { //if no name, simply return
   	return -1;
   }
 
