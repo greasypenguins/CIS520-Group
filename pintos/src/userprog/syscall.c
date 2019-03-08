@@ -14,8 +14,32 @@
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "threads/synch.h"
-#include "filesys/file.c"
 static void syscall_handler (struct intr_frame *);
+
+bool user_pointer_check(void *);
+
+/* Returns true if the pointer is valid */
+bool user_pointer_check(void * ptr)
+{
+  /* Null pointers and pointers to outside user memory are invalid */
+  if((ptr == NULL         )
+  || (!is_user_vaddr(ptr)))
+  {
+    return false;
+  }
+
+  uint32_t * active_page_table_directory = active_pd();
+
+  /* Pointer is valid only if it points to a page in the active page table directory */
+  if( lookup_page(active_page_table_directory, ptr, false) == NULL)
+  {
+    return false;
+  }
+  else
+  {
+    return true;
+  }
+}
 
 struct lock sys_lock; //lock to guarantee only one process is altering the file at a time
 
@@ -59,14 +83,7 @@ exec (const char *cmd_line) {
 
 int
 wait (pid_t pid) {
-  process_wait(pid);
-/*============================================================================================
-
-==============================================================================================
-ATTENTION: What are we supposed to return here???
-==============================================================================================
-
-============================================================================================*/
+  return process_wait(pid);
 }
 
 bool
