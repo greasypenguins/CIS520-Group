@@ -749,6 +749,22 @@ allocate_tid (void)
 
   return tid;
 }
+
+/* Returns the thread matching the given tid. */
+struct thread *
+running_thread (tid_t tid)
+{
+  struct list_elem *temp;
+
+  for (temp = list_front(&all_list); temp != NULL; temp = temp->next) {
+    struct thread *t = list_entry(temp, struct thread, child_elem);
+    if (t->tid == tid) {
+      break;
+    }
+  }
+
+  return t;
+}
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */

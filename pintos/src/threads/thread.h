@@ -163,5 +163,6 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 struct file * thread_get_open_file(int);
+struct thread *running_thread (tid_t);
 
 #endif /* threads/thread.h */
