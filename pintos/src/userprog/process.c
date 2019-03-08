@@ -55,8 +55,8 @@ process_execute (const char *file_name)
     palloc_free_page (fn_copy); //release filename copy if not able to create thread
   }
   else {
-    thread t = &(find_thread (tid));
-    list_push_front (&thread_current()->child_list, t->child_elem); //add thread to thread's child list
+    struct thread * t = find_thread (tid);
+    list_push_front (&thread_current()->child_list, &(t->child_elem)); //add thread to thread's child list
   }
   return tid;
 }
@@ -116,7 +116,7 @@ process_wait (tid_t child_tid UNUSED)
   struct thread *child_thread = NULL;
   struct list_elem *temp;
 
-  if (list_empty(&thread_current()->child_list) {
+  if (list_empty(&thread_current()->child_list)) {
     return -1;
   }
 

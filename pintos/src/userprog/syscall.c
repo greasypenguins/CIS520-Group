@@ -39,7 +39,7 @@ halt(void) {
 
 void
 exit (int status) {
-  struct thread t = thread_current(); //set thread t to current thread
+  struct thread * t = thread_current(); //set thread t to current thread
   t->exit_status = status; //set kernel thread t's status to passed status
   printf("Thread: %s, exit(%d)\n",t->name, status); //print full thread t name
   thread_exit(); //exit the thread
@@ -75,7 +75,7 @@ remove (const char *file) {
   lock_acquire(&sys_lock); //added lock
   bool removed = filesys_remove(file);
   lock_release(&sys_lock);
-  return removed(file);
+  return removed;
 }
 
 int
