@@ -55,7 +55,8 @@ process_execute (const char *file_name)
     palloc_free_page (fn_copy); //release filename copy if not able to create thread
   }
   else {
-    list_push_front (&thread_current()->child_list, ); //add thread to thread's child list
+    thread t = &(find_thread (tid));
+    list_push_front (&thread_current()->child_list, t->child_elem); //add thread to thread's child list
   }
   return tid;
 }
