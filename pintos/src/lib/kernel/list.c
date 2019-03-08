@@ -304,14 +304,14 @@ list_back (struct list *list)
 /* Returns the nth position element in LIST.
    Undefined behavior if LIST is empty. */
 struct list_elem *
-list_index (struct list *list, int position)
+list_index (struct list *list, unsigned int position)
 {
   ASSERT (!list_empty (list));
   ASSERT (list_size(list)>position); //make sure size of list is greater than desired index return
   struct list_elem *temp = NULL; //list elem to return
 
   temp = &list->head;
-  for (int i=0; i<=position; i++) //iterate through the list till at index "position"
+  for (unsigned int i=0; i<=position; i++) //iterate through the list till at index "position"
   {
     temp = temp->next;
   }

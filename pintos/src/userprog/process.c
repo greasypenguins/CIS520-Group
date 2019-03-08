@@ -39,18 +39,20 @@ process_execute (const char *file_name)
   //Otherwise there's a race between the caller and load().
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
+  {
     return TID_ERROR;
+  }
   strlcpy (fn_copy, file_name, PGSIZE);
 
   char * save_ptr;
-  const char delims = " ";
-  fname_tokens = strtok_r((char *)file_name, delims, &save_ptr); //tokenize name
+  const char delims = ' ';
+  fname_tokens = strtok_r((char *)file_name, &delims, &save_ptr); //tokenize name
   if (fname_tokens == NULL) { //if no name, simply return
   	return -1;
   }
 
   //Create a new thread to execute FILE_NAME.
-  tid = thread_create (fname_tokens[0], PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (&(fname_tokens[0]), PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR) {
     palloc_free_page (fn_copy); //release filename copy if not able to create thread
   }
@@ -242,7 +244,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp, int arg_count, char * arg_array);
+static bool setup_stack (void **esp, int arg_count, char ** arg_array);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -255,14 +257,23 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 bool
 load (const char *file_name, void (**eip) (void), void **esp)
 {
+
+/*============================================================================================
+
+==============================================================================================
+ATTENTION: We aren't doing anything with file_name yet!!!
+==============================================================================================
+
+============================================================================================*/
+
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
   off_t file_ofs;
   bool success = false;
   int i;
-  char *arg_array[25];
-  int arg_count;
+  char * arg_array[25];
+  unsigned int arg_count;
 
 
   /* Allocate and activate page directory. */
@@ -271,8 +282,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
-  for (int arg_count = 0; arg_count < (sizeof(fname_tokens)/sizeof(fname_tokens[0])); arg_count++) {
-    arg_array[arg_count] = fname_tokens[arg_count];
+  for (arg_count = 0; arg_count < (sizeof(fname_tokens)/sizeof(fname_tokens[0])); arg_count++) {
+    arg_array[arg_count] = &(fname_tokens[arg_count]);
   }
   file = filesys_open(arg_array[0]);
 
@@ -480,7 +491,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp, int arg_count, char * arg_array)
+setup_stack (void **esp, int arg_count, char ** arg_array)
 {
   uint8_t *kpage;
   bool success = false;
@@ -503,7 +514,7 @@ setup_stack (void **esp, int arg_count, char * arg_array)
              '/0'). Copy the string to the stack, and add its reference to the array
               of pointers. */
           *esp = *esp - sizeof(char)*(strlen(arg_array[i])+1);
-          memcpy(*esp, arg_array[i], sizeof(char)*(strlen(arg_array[i])+1));
+          memcpy(*esp, arg_array[i], sizeof(char)*(strlen(arg_array[i]+1)));
           arg_point[i] = (uint32_t *)*esp;
         }
         /* Allocate space for & add the null sentinel. */

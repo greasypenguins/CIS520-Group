@@ -52,7 +52,7 @@ exec (const char *cmd_line) {
     return -1;
   }
   lock_acquire(&sys_lock); // acquire lock before returning child PID
-  pid_t new_id = process_execute(*cmd_line);
+  pid_t new_id = (pid_t)process_execute(cmd_line);
   lock_release(&sys_lock);
   return new_id;
 }
@@ -60,7 +60,13 @@ exec (const char *cmd_line) {
 int
 wait (pid_t pid) {
   process_wait(pid);
-  //What are we supposed to return here?
+/*============================================================================================
+
+==============================================================================================
+ATTENTION: What are we supposed to return here???
+==============================================================================================
+
+============================================================================================*/
 }
 
 bool
