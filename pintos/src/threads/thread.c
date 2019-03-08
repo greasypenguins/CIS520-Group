@@ -11,7 +11,6 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
-#include "filesys/file.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -756,9 +755,10 @@ struct thread *
 find_thread (tid_t tid)
 {
   struct list_elem *temp;
+  struct thread *t;
 
   for (temp = list_front(&all_list); temp != NULL; temp = temp->next) {
-    struct thread *t = list_entry(temp, struct thread, child_elem);
+    t = list_entry(temp, struct thread, allelem);
     if (t->tid == tid) {
       break;
     }
