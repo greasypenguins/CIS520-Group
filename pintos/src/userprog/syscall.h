@@ -1,11 +1,13 @@
 #ifndef USERPROG_SYSCALL_H
 #define USERPROG_SYSCALL_H
 
+#include <stdbool.h>
+
 typedef int pid_t;
 
 void syscall_init (void);
 
-static void syscall_handler (struct intr_frame *f UNUSED); //double check
+//static void syscall_handler (struct intr_frame *f UNUSED); //double check
 void halt(void);
 void exit (int);
 pid_t exec (const char *cmd_line);
