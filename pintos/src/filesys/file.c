@@ -3,16 +3,6 @@
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 
-/* An open file. */
-struct file 
-  {
-    struct inode *inode;        /* File's inode. */
-    off_t pos;                  /* Current position. */
-    bool deny_write;            /* Has file_deny_write() been called? */
-    struct list_elem file_elem;        /* Used by list of files in struct thread */
-    int fd;                     /* File descriptor */
-    //Our implementation of fd assumes only one thread at a time can have a file open!
-  };
 
 /* Opens a file for the given INODE, of which it takes ownership,
    and returns the new file.  Returns a null pointer if an

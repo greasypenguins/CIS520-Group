@@ -5,6 +5,17 @@
 
 struct inode;
 
+/* An open file. */
+struct file 
+  {
+    struct inode *inode;        /* File's inode. */
+    off_t pos;                  /* Current position. */
+    bool deny_write;            /* Has file_deny_write() been called? */
+    struct list_elem file_elem;        /* Used by list of files in struct thread */
+    int fd;                     /* File descriptor */
+    //Our implementation of fd assumes only one thread at a time can have a file open!
+  };
+
 /* Opening and closing files. */
 struct file *file_open (struct inode *);
 struct file *file_reopen (struct file *);
