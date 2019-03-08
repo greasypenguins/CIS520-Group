@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "lib/kernel/list.h"
 
 char * fname_tokens;
 static thread_func start_process NO_RETURN;
@@ -54,7 +55,7 @@ process_execute (const char *file_name)
     palloc_free_page (fn_copy); //release filename copy if not able to create thread
   }
   else {
-    //add thread to thread's child list
+    list_push_front(&thread_current()->child_list, &(tid->child_elem)); //add thread to thread's child list
   }
   return tid;
 }
@@ -114,7 +115,7 @@ process_wait (tid_t child_tid UNUSED)
   struct thread *child_thread = NULL;
   struct list_elem *temp;
 
-  if (list_empty(&thread_current()->child_list) {
+  if (list_empty(&thread_current()->child_list)) {
     return -1;
   }
 
@@ -124,6 +125,8 @@ process_wait (tid_t child_tid UNUSED)
       child_thread = t;
       break;
     }
+  }
+
   if(child_thread == NULL) {
     return -1;
   }
