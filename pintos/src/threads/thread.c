@@ -752,7 +752,7 @@ allocate_tid (void)
 
 /* Returns the thread matching the given tid. */
 struct thread *
-running_thread (tid_t tid)
+find_thread (tid_t tid)
 {
   struct list_elem *temp;
 
