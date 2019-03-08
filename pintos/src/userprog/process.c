@@ -126,7 +126,7 @@ process_wait (tid_t child_tid UNUSED)
       break;
     }
   }
-  
+
   if(child_thread == NULL) {
     return -1;
   }
