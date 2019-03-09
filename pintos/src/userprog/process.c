@@ -42,15 +42,18 @@ process_execute (const char *file_name)
 
   /* Make a copy of file_name.
      Otherwise there's a race between the caller and load(). */
-  fn_copy = (char *)palloc_get_page(PAL_USER);
+  printf("file_name: <start>%s<end>\n", file_name);
+  fn_copy = (char *)palloc_get_page(0);
   if(fn_copy == NULL)
   {
     return TID_ERROR;
   }
   strlcpy(fn_copy, file_name, PGSIZE);
 
+  printf("fn_copy: <start>%s<end>\n", fn_copy);
+
   /* Copy file_name into a string that can be tokenized */
-  fn_copy_tok = (char *)palloc_get_page(PAL_USER);
+  fn_copy_tok = (char *)palloc_get_page(0);
   if(fn_copy_tok == NULL)
   {
     palloc_free_page (fn_copy);
@@ -104,25 +107,31 @@ start_process (void *file_name_)
     thread_exit();
   }
 
+  printf("raw string: <start>%s<end>\n", file_name);
+
   /* Tokenize input string.
      First token is the file name and the rest are args. */
   token = strtok_r(file_name, " ", &save_ptr);
-  
+  printf("token: %s\n", token);
+
   /* There is always at least one argument (the name of the executable) */
   /* Store this argument's address in the arg_ptrs list */
   arg_ptrs[num_args] = token;
+  printf("Just added arg %d: %s\n", num_args, token);
   num_args++;
 
   while(num_args < (PGSIZE / 4))
   {
+    printf("Top of while loop %d\n", num_args);
     /* Get the next argument */
     token = strtok_r(NULL, " ", &save_ptr);
-
+    printf("token: %s\n", token);
     /* If there is an argument */
     if(token != NULL)
     {
       /* Store this argument's address in the arg_ptrs list */
       arg_ptrs[num_args] = token;
+      printf("Just added arg %d: %s\n", num_args, token);
       num_args++;
     }
     else
@@ -130,6 +139,8 @@ start_process (void *file_name_)
       break;
     }
   }
+
+  printf("num_args: %d\n", num_args);
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -564,12 +575,10 @@ setup_stack (void **esp, char ** arg_ptrs, int num_args)
         /* For each arg in reverse order */
         for(int i = num_args - 1; i >= 0; i--)
         {
-          arg_len = strlen(arg_ptrs[i]);
-
+          arg_len = strlen(arg_ptrs[i]) + 1;
+          printf("arg_len=%u\n", arg_len);
           /* Decrement stack pointer to have enough space for the next arg */
           *esp = (void *)(((char *)(*esp)) - arg_len);
-          /* Round down to the nearest word boundary */
-          *esp = (void *)(((uint32_t)(*esp)) & 0xfffffffc);
           
           /* Copy arg into stack */
           strlcpy((char *)(*esp), arg_ptrs[i], arg_len);
@@ -578,6 +587,10 @@ setup_stack (void **esp, char ** arg_ptrs, int num_args)
           arg_ptrs[i] = (char *)(*esp);
         }
         
+        /* Round down to the nearest word boundary.
+           Skipped bytes are already 0, so no nead to write pad bytes. */
+        *esp = (void *)(((uint32_t)(*esp)) & 0xfffffffc);
+
         /* Set argv[argc] = 0 */
         *esp = (char *)(*esp) - 4;
         *((char **)(*esp)) = NULL;
@@ -601,6 +614,8 @@ setup_stack (void **esp, char ** arg_ptrs, int num_args)
         /* Add a fake return address */
         *esp = (char *)(*esp) - 4;
         *((void **)(*esp)) = NULL;
+
+        hex_dump((uintptr_t)(*esp), *esp, (int)(((char *)PHYS_BASE) - ((char *)(*esp))), true);
       }
       else
         palloc_free_page (kpage);

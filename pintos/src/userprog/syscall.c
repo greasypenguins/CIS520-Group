@@ -77,16 +77,20 @@ syscall_handler (struct intr_frame *f)
   {
     /* Projects 2 and later. */
     case SYS_HALT:      /* Halt the operating system. */
+      printf("syscall number matches SYS_HALT\n");
       halt();
       break;
     case SYS_EXIT:      /* Terminate this process. */
+      printf("syscall number matches SYS_EXIT\n");
 		  status = (int)get_value_from_stack(f, 1);
 		  exit(status);
       //get status from stack
       //exit(int status);
       break;
     case SYS_EXEC:      /* Start another process. */
+      printf("syscall number matches SYS_EXEC\n");
 		  cmd_line = (const char *)get_value_from_stack(f, 1);
+      //hex_dump((uintptr_t)(f->esp), f->esp, 8, true);
 		  pret = exec(cmd_line);
 	    f->eax = (uint32_t)pret;
       //get cmd_line from the stack
@@ -94,6 +98,7 @@ syscall_handler (struct intr_frame *f)
       //return ret on the stack
       break;
     case SYS_WAIT:      /* Wait for a child process to die. */
+      printf("syscall number matches SYS_WAIT\n");
 	    pret = (pid_t)get_value_from_stack(f, 1);
 	  
 	    ret = wait(pret);
@@ -103,6 +108,7 @@ syscall_handler (struct intr_frame *f)
       //return ret on the stack
       break;
     case SYS_CREATE:    /* Create a file. */
+      printf("syscall number matches SYS_CREATE\n");
 	    cmd_line = (const char*)get_value_from_stack(f, 1);
 	    unsigned initial_size = (unsigned int)get_value_from_stack(f, 2);
 	    bool ret = create(cmd_line, initial_size);
@@ -113,21 +119,26 @@ syscall_handler (struct intr_frame *f)
       //return ret on the stack
       break;
     case SYS_REMOVE:    /* Delete a file. */
+      printf("syscall number matches SYS_REMOVE\n");
       f->eax = (uint32_t)remove((const char *)get_value_from_stack(f, 1));
       break;
     case SYS_OPEN:      /* Open a file. */
+      printf("syscall number matches SYS_OPEN\n");
 	    f->eax = (uint32_t)open((const char *)get_value_from_stack(f, 1));
       break;
     case SYS_FILESIZE:  /* Obtain a file's size. */
+      printf("syscall number matches SYS_FILESIZE\n");
 	    f->eax = (uint32_t)filesize((int)get_value_from_stack(f, 1));
       break;
     case SYS_READ:      /* Read from a file. */
+      printf("syscall number matches SYS_READ\n");
 	    fd = (int)get_value_from_stack(f, 1);
 	    buffer = (void *)get_value_from_stack(f, 2);
 	    unsigned size = (unsigned)get_value_from_stack(f, 3);
 	    f->eax = (uint32_t)read(fd, buffer, size);
       break;
     case SYS_WRITE:     /* Write to a file. */
+      printf("syscall number matches SYS_WRITE\n");
       fd = (int)get_value_from_stack(f, 1);
       buffer = (void *)get_value_from_stack(f, 2);
       unsigned int isize = (unsigned int)get_value_from_stack(f, 3);
@@ -135,16 +146,19 @@ syscall_handler (struct intr_frame *f)
       f->eax = (uint32_t)ret;
       break;
     case SYS_SEEK:      /* Change position in a file. */
+      printf("syscall number matches SYS_SEEK\n");
       fd = (int)get_value_from_stack(f, 1);
       unsigned int position = (unsigned int)get_value_from_stack(f, 2);
       seek(fd, position);
       break;
     case SYS_TELL:      /* Report current position in a file. */
+      printf("syscall number matches SYS_TELL\n");
       fd = (int)get_value_from_stack(f, 1);
       unsigned int uret = tell(fd);
       f->eax = (uint32_t)uret;
       break;
     case SYS_CLOSE:     /* Close a file. */
+      printf("syscall number matches SYS_CLOSE\n");
       fd = (int)get_value_from_stack(f, 1);
       close(fd);
       break;
@@ -171,9 +185,8 @@ exec (const char *cmd_line) {
     return -1;
   }
 
-  lock_acquire(&sys_lock); // acquire lock before returning child PID
   pid_t new_id = (pid_t)process_execute(cmd_line);
-  lock_release(&sys_lock);
+
   return new_id;
 }
 
@@ -264,9 +277,7 @@ write (int fd, const void *buffer, unsigned int size) {
   }
 
   if (fd == 1) {
-    lock_acquire(&filesys_lock);
     putbuf(buffer,size); //implement correct call using this function
-    lock_release(&filesys_lock);
     return size;
   }
   else {
