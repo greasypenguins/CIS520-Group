@@ -17,9 +17,9 @@ bool remove (const char *file);
 int open (const char *file);
 int filesize (int);
 int read (int, void *buffer, unsigned size);
-int write (int, const void *buffer, unsigned size);
-void seek (int, unsigned position);
-unsigned tell (int);
+int write (int, const void *buffer, unsigned int size);
+void seek (int, unsigned int position);
+unsigned int tell (int);
 void close (int);
 
 #endif /* userprog/syscall.h */

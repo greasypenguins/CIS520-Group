@@ -102,16 +102,25 @@ syscall_handler (struct intr_frame *f)
 	  (int)f->eax = read(fd, buffer, size);
       break;
     case SYS_WRITE:     /* Write to a file. */
-      //int ret = write(int fd, const void *buffer, unsigned size);
+      int fd = (int)(*((int *)(f->esp)+1));
+      void * buffer = (void *)(*((int *)(f->esp)+2));
+      unsigned int size = (unsigned int)(*((int *)(f->esp)+3));
+      int ret = write(fd, buffer, size);
+      f->eax = (uint32_t)ret;
       break;
     case SYS_SEEK:      /* Change position in a file. */
-      //seek(int fd, unsigned position);
+      int fd = (int)(*((int *)(f->esp)+1));
+      unsigned int position = (unsigned int)(*((int *)(f->esp)+2));
+      seek(fd, position);
       break;
     case SYS_TELL:      /* Report current position in a file. */
-      //unsigned int ret = tell(int fd);
+      int fd = (int)(*((int *)(f->esp)+1));
+      unsigned int ret = tell(fd);
+      f->eax = (uint32_t)ret;
       break;
     case SYS_CLOSE:     /* Close a file. */
-      //close(int fd);
+      int fd = (int)(*((int *)(f->esp)+1));
+      close(fd);
       break;
   }
 }
@@ -212,7 +221,7 @@ read (int fd, void *buffer, unsigned size) {
 }
 
 int
-write (int fd, const void *buffer, unsigned size) {
+write (int fd, const void *buffer, unsigned int size) {
   if(!user_pointer_is_valid(buffer))
   {
     return -1;
@@ -220,7 +229,7 @@ write (int fd, const void *buffer, unsigned size) {
 
   if (fd == 1) {
     lock_acquire(&sys_lock);
-    putbuf(buffer,size); //implement correct call using this fucntion
+    putbuf(buffer,size); //implement correct call using this function
     lock_release(&sys_lock);
     return size;
   }
@@ -231,7 +240,7 @@ write (int fd, const void *buffer, unsigned size) {
 }
 
 void
-seek (int fd, unsigned position) {
+seek (int fd, unsigned int position) {
   lock_acquire(&sys_lock); //added lock
 
   if (list_empty(&thread_current()->open_files)) //immediately return if no open files
@@ -245,7 +254,7 @@ seek (int fd, unsigned position) {
   return;
 }
 
-unsigned
+unsigned int
 tell (int fd) {
   //Get a reference to the file
   struct file * open_file = thread_get_open_file(fd);
