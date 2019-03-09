@@ -100,18 +100,18 @@ syscall_handler (struct intr_frame *f)
       //return ret on the stack
       break;
     case SYS_REMOVE:    /* Delete a file. */
-      (bool)f->eax = remove(*(const char *)(f->esp + 1));
+      (bool)f->eax = remove((const char *)*(int *)(f->esp + 1));
       break;
     case SYS_OPEN:      /* Open a file. */
-	  (int)f->eax = open(*(const char *)(f->esp + 1));
+	  (int)f->eax = open((const char *)*(int *)(f->esp + 1));
       break;
     case SYS_FILESIZE:  /* Obtain a file's size. */
-	  (int)f->eax = filesize(*(int)(f->esp + 1));
+	  (int)f->eax = filesize((int *)*(int *)(f->esp + 1));
       break;
     case SYS_READ:      /* Read from a file. */
-	  int fd = *(int)(f->esp + 1);
-	  void *buffer = *(void *)(f->esp + 2);
-	  unsigned size = *(unsigned)(f->esp + 3);
+	  int fd = (int)*(int *)(f->esp + 1);
+	  void *buffer = (void *)*(int *)(f->esp + 2);
+	  unsigned size = (unsigned)*(int *)(f->esp + 3);
 	  (int)f->eax = read(fd, buffer, size);
       break;
     case SYS_WRITE:     /* Write to a file. */
