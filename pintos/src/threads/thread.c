@@ -35,9 +35,6 @@ static struct thread *idle_thread;
 /* Initial thread, the thread running init.c:main(). */
 static struct thread *initial_thread;
 
-/* Lock used by allocate_tid(). */
-//static struct lock tid_lock; //WMH: Might need to re-enable this
-
 struct lock pri_lock;
 
 /* Stack frame for kernel_thread(). */
@@ -252,7 +249,8 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  if(thread_get_donated_priority(t) > thread_get_priority())
+  if((!intr_context()                                       )
+  && (thread_get_donated_priority(t) > thread_get_priority()))
   {
     thread_yield();
   }
@@ -407,7 +405,8 @@ thread_set_priority (int new_priority)
   if(!list_empty(&ready_list))
   {
     struct thread * t_front = list_entry(list_front(&ready_list), struct thread, elem);
-    if(thread_get_priority() < thread_get_donated_priority(t_front))
+    if((!intr_context()                                             )
+    && (thread_get_priority() < thread_get_donated_priority(t_front)))
     {
       thread_yield();
     }
@@ -557,6 +556,12 @@ idle (void *idle_started_ UNUSED)
 {
   struct semaphore *idle_started = idle_started_;
   idle_thread = thread_current ();
+
+  if(intr_context())
+  {
+    printf("idle() is calling sema_up() in an interrupt context\n");
+  }
+
   sema_up (idle_started);
 
   for (;;)

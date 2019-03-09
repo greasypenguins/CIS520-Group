@@ -80,33 +80,33 @@ syscall_handler (struct intr_frame *f)
       halt();
       break;
     case SYS_EXIT:      /* Terminate this process. */
-		status = (int)get_value_from_stack(f, 1);
-		exit(status);
+		  status = (int)get_value_from_stack(f, 1);
+		  exit(status);
       //get status from stack
       //exit(int status);
       break;
     case SYS_EXEC:      /* Start another process. */
-		cmd_line = (const char *)get_value_from_stack(f, 1);
-		pret = exec(cmd_line);
-	  f->eax = (uint32_t)pret;
+		  cmd_line = (const char *)get_value_from_stack(f, 1);
+		  pret = exec(cmd_line);
+	    f->eax = (uint32_t)pret;
       //get cmd_line from the stack
       //pid_t ret = exec(const char *cmd_line);
       //return ret on the stack
       break;
     case SYS_WAIT:      /* Wait for a child process to die. */
-	  pret = (pid_t)get_value_from_stack(f, 1);
+	    pret = (pid_t)get_value_from_stack(f, 1);
 	  
-	  ret = wait(pret);
-	  f->eax = (uint32_t)ret;
+	    ret = wait(pret);
+	    f->eax = (uint32_t)ret;
       //get pid from the stack
       //int ret = wait(pid_t pid);
       //return ret on the stack
       break;
     case SYS_CREATE:    /* Create a file. */
-	  cmd_line = (const char*)get_value_from_stack(f, 1);
-	  unsigned initial_size = (unsigned int)get_value_from_stack(f, 2);
-	  bool ret = create(cmd_line, initial_size);
-	  f->eax = (uint32_t)ret;
+	    cmd_line = (const char*)get_value_from_stack(f, 1);
+	    unsigned initial_size = (unsigned int)get_value_from_stack(f, 2);
+	    bool ret = create(cmd_line, initial_size);
+	    f->eax = (uint32_t)ret;
       //get file from the stack
       //get initial_size from the stack
       //bool ret = create(const char *file, unsigned initial_size);
@@ -116,16 +116,16 @@ syscall_handler (struct intr_frame *f)
       f->eax = (uint32_t)remove((const char *)get_value_from_stack(f, 1));
       break;
     case SYS_OPEN:      /* Open a file. */
-	  f->eax = (uint32_t)open((const char *)get_value_from_stack(f, 1));
+	    f->eax = (uint32_t)open((const char *)get_value_from_stack(f, 1));
       break;
     case SYS_FILESIZE:  /* Obtain a file's size. */
-	  f->eax = (uint32_t)filesize((int *)get_value_from_stack(f, 1));
+	    f->eax = (uint32_t)filesize((int)get_value_from_stack(f, 1));
       break;
     case SYS_READ:      /* Read from a file. */
-	  fd = (int)get_value_from_stack(f, 1);
-	  buffer = (void *)get_value_from_stack(f, 2);
-	  unsigned size = (unsigned)get_value_from_stack(f, 3);
-	  f->eax = (uint32_t)read(fd, buffer, size);
+	    fd = (int)get_value_from_stack(f, 1);
+	    buffer = (void *)get_value_from_stack(f, 2);
+	    unsigned size = (unsigned)get_value_from_stack(f, 3);
+	    f->eax = (uint32_t)read(fd, buffer, size);
       break;
     case SYS_WRITE:     /* Write to a file. */
       fd = (int)get_value_from_stack(f, 1);
@@ -184,17 +184,17 @@ wait (pid_t pid) {
 
 bool
 create (const char *file, unsigned initial_size) {
-  lock_acquire(&sys_lock); //added lock
+  lock_acquire(&filesys_lock);
   bool create_file = filesys_create(file, initial_size);
-  lock_release(&sys_lock);
+  lock_release(&filesys_lock);
   return create_file;
 }
 
 bool
 remove (const char *file) {
-  lock_acquire(&sys_lock); //added lock
+  lock_acquire(&filesys_lock);
   bool removed = filesys_remove(file);
-  lock_release(&sys_lock);
+  lock_release(&filesys_lock);
   return removed;
 }
 
@@ -206,6 +206,7 @@ open (const char *file) {
   }
 
   struct thread * t = thread_current();
+  lock_acquire(&filesys_lock);
   struct file * f = filesys_open(file);
   if (f == NULL) {
     return -1;
@@ -224,12 +225,18 @@ open (const char *file) {
     f->fd = last_open_file->fd + 1;
   }
 
-  return f->fd;
+  int fd = f->fd;
+  lock_release(&filesys_lock);
+
+  return fd;
 }
 
 int
 filesize (int fd) {
-  return (int)file_length(thread_get_open_file(fd));
+  lock_acquire(&filesys_lock);
+  int fs = (int)file_length(thread_get_open_file(fd));
+  lock_release(&filesys_lock);
+  return fs;
 }
 
 int
@@ -239,7 +246,10 @@ read (int fd, void *buffer, unsigned size) {
     return -1;
   }
 
+  lock_acquire(&filesys_lock);
   int data = file_read(thread_get_open_file(fd), buffer, size);
+  lock_release(&filesys_lock);
+
   if (data == 0) {
     return -1;
   }
@@ -254,42 +264,49 @@ write (int fd, const void *buffer, unsigned int size) {
   }
 
   if (fd == 1) {
-    lock_acquire(&sys_lock);
+    lock_acquire(&filesys_lock);
     putbuf(buffer,size); //implement correct call using this function
-    lock_release(&sys_lock);
+    lock_release(&filesys_lock);
     return size;
   }
   else {
-    return file_write(thread_get_open_file(fd), buffer, size);
+    lock_acquire(&filesys_lock);
+    int num_bytes_written = file_write(thread_get_open_file(fd), buffer, size);
+    lock_release(&filesys_lock);
+    return num_bytes_written;
   }
 
 }
 
 void
 seek (int fd, unsigned int position) {
-  lock_acquire(&sys_lock); //added lock
+  lock_acquire(&filesys_lock);
 
   if (list_empty(&thread_current()->open_files)) //immediately return if no open files
   {
-    lock_release(&sys_lock);
+    lock_release(&filesys_lock);
     return;
   }
 
   file_seek(thread_get_open_file(fd), position); //otherwise use thread_get_open_file() to return current file as arguement for file_seek()
-  lock_release(&sys_lock);
+  lock_release(&filesys_lock);
   return;
 }
 
 unsigned int
 tell (int fd) {
+  lock_acquire(&filesys_lock);
   //Get a reference to the file
   struct file * open_file = thread_get_open_file(fd);
-
+  off_t pos = open_file->pos;
+  lock_release(&filesys_lock);
   //Return the file's position
-  return open_file->pos;
+  return pos;
 }
 
 void
 close (int fd) {
+  lock_acquire(&filesys_lock);
   file_close(thread_get_open_file(fd));
+  lock_release(&filesys_lock);
 }

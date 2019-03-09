@@ -122,10 +122,16 @@ sema_up (struct semaphore *sema)
   }
 
   sema->value++;
+
   if(thread_unblocked)
   {
+    if(!intr_context())
+    {
+      //printf("sema_up() is calling thread_yield() in an interrupt context\n");
       thread_yield();
+    }
   }
+
   intr_set_level (old_level);
 }
 
@@ -146,6 +152,10 @@ sema_self_test (void)
   thread_create ("sema-test", PRI_DEFAULT, sema_test_helper, &sema);
   for (i = 0; i < 10; i++)
     {
+      if(intr_context())
+      {
+        printf("sema_self_test() is calling sema_up() in an interrupt context\n");
+      }
       sema_up (&sema[0]);
       sema_down (&sema[1]);
     }
@@ -162,6 +172,10 @@ sema_test_helper (void *sema_)
   for (i = 0; i < 10; i++)
     {
       sema_down (&sema[0]);
+      if(intr_context())
+      {
+        printf("sema_test_helper() is calling sema_up() in an interrupt context\n");
+      }
       sema_up (&sema[1]);
     }
 }
@@ -278,6 +292,11 @@ lock_release (struct lock *lock)
 
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+  
+  if(intr_context())
+  {
+    printf("lock_release() is being called in an interrupt context\n");
+  }
 
   old_level = intr_disable();
 
@@ -286,6 +305,11 @@ lock_release (struct lock *lock)
   list_remove(&(lock->lock_elem));
   thread_recalculate_donated_priority(thread_current());
   intr_set_level(old_level);
+
+  if(intr_context())
+  {
+    printf("lock_release() is calling sema_up() in an interrupt context\n");
+  }
 
   sema_up (&lock->semaphore);
 
@@ -300,7 +324,8 @@ lock_release (struct lock *lock)
     intr_set_level(old_level);
 
     /* If the highest priority donor has higher priority, yield the current thread. */
-    if(thread_get_donated_priority(donor_thread) > thread_get_priority())
+    if((!intr_context()                                                  )
+    && (thread_get_donated_priority(donor_thread) > thread_get_priority()))
     {
       thread_yield();
     }
@@ -388,9 +413,20 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
 
+  if(intr_context())
+  {
+    printf("cond_signal() is being called in an interrupt context\n");
+  }
+
   if (!list_empty (&cond->waiters))
   {
     list_sort(&cond->waiters, condvar_less_func, NULL);
+
+    if(intr_context())
+    {
+      printf("cond_signal() is calling sema_up() in an interrupt context\n");
+    }
+
     sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
   }
