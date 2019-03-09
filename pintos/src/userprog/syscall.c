@@ -14,6 +14,7 @@
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "threads/synch.h"
+#include "lib/syscall-nr.h"
 static void syscall_handler (struct intr_frame *);
 
 bool user_pointer_is_valid(const void *);
@@ -51,10 +52,65 @@ syscall_init (void)
 }
 
 static void
-syscall_handler (struct intr_frame *f UNUSED)
+syscall_handler (struct intr_frame *f)
 {
-  printf ("system call!\n");
-  thread_exit ();
+  if(!user_pointer_is_valid((void *)f))
+  {
+    return;
+  }
+
+  int syscall_number = *((int *)(f->esp));
+  switch(syscall_number)
+  {
+    /* Projects 2 and later. */
+    case SYS_HALT:      /* Halt the operating system. */
+      halt();
+      break;
+    case SYS_EXIT:      /* Terminate this process. */
+      //get status from stack
+      //exit(int status);
+      break;
+    case SYS_EXEC:      /* Start another process. */
+      //get cmd_line from the stack
+      //pid_t ret = exec(const char *cmd_line);
+      //return ret on the stack
+      break;
+    case SYS_WAIT:      /* Wait for a child process to die. */
+      //get pid from the stack
+      //int ret = wait(pid_t pid);
+      //return ret on the stack
+      break;
+    case SYS_CREATE:    /* Create a file. */
+      //get file from the stack
+      //get initial_size from the stack
+      //bool ret = create(const char *file, unsigned initial_size);
+      //return ret on the stack
+      break;
+    case SYS_REMOVE:    /* Delete a file. */
+      //bool ret = remove(const char *file);
+      break;
+    case SYS_OPEN:      /* Open a file. */
+      //int ret = open(const char *file);
+      break;
+    case SYS_FILESIZE:  /* Obtain a file's size. */
+      //int ret = filesize(int fd);
+      break;
+    case SYS_READ:      /* Read from a file. */
+      //int ret = read(int fd, void *buffer, unsigned size);
+      break;
+    case SYS_WRITE:     /* Write to a file. */
+      //int ret = write(int fd, const void *buffer, unsigned size);
+      break;
+    case SYS_SEEK:      /* Change position in a file. */
+      //seek(int fd, unsigned position);
+      break;
+    case SYS_TELL:      /* Report current position in a file. */
+      //unsigned int ret = tell(int fd);
+      break;
+    case SYS_CLOSE:     /* Close a file. */
+      //close(int fd);
+      break;
+  }
 }
 
 void
