@@ -65,6 +65,13 @@ syscall_handler (struct intr_frame *f)
     return;
   }
 
+  int fd;
+  void * buffer;
+  int status;
+  int ret;
+  pid_t pret;
+  const char *cmd_line;
+
   int syscall_number = get_value_from_stack(f, 0);
   switch(syscall_number)
   {
@@ -73,72 +80,72 @@ syscall_handler (struct intr_frame *f)
       halt();
       break;
     case SYS_EXIT:      /* Terminate this process. */
-		int status = (int)get_value_from_stack(f, 1);
+		status = (int)get_value_from_stack(f, 1);
 		exit(status);
       //get status from stack
       //exit(int status);
       break;
     case SYS_EXEC:      /* Start another process. */
-		const char *cmd_line = (const char *)get_value_from_stack(f, 1);
-		pid_t ret = exec(const char *cmd_line));
-		f->eax = (int)ret;
+		cmd_line = (const char *)get_value_from_stack(f, 1);
+		pret = exec(cmd_line);
+	  f->eax = (uint32_t)pret;
       //get cmd_line from the stack
       //pid_t ret = exec(const char *cmd_line);
       //return ret on the stack
       break;
     case SYS_WAIT:      /* Wait for a child process to die. */
-	  pid_t pid = (pid_t)get_value_from_stack(f, 1);
+	  pret = (pid_t)get_value_from_stack(f, 1);
 	  
-	  int ret = wait(pid_t pid);
-	  f->eax = (int)ret;
+	  ret = wait(pret);
+	  f->eax = (uint32_t)ret;
       //get pid from the stack
       //int ret = wait(pid_t pid);
       //return ret on the stack
       break;
     case SYS_CREATE:    /* Create a file. */
-	  const char *file = (const char*)get_value_from_stack(f, 1);
+	  cmd_line = (const char*)get_value_from_stack(f, 1);
 	  unsigned initial_size = (unsigned int)get_value_from_stack(f, 2);
-	  bool ret = create(const char *file, unsigned initial_size);
-	  f->eax = (int)ret;
+	  bool ret = create(cmd_line, initial_size);
+	  f->eax = (uint32_t)ret;
       //get file from the stack
       //get initial_size from the stack
       //bool ret = create(const char *file, unsigned initial_size);
       //return ret on the stack
       break;
     case SYS_REMOVE:    /* Delete a file. */
-      (bool)f->eax = remove((const char *)get_value_from_stack(f, 1));
+      f->eax = (uint32_t)remove((const char *)get_value_from_stack(f, 1));
       break;
     case SYS_OPEN:      /* Open a file. */
-	  (int)f->eax = open((const char *)get_value_from_stack(f, 1));
+	  f->eax = (uint32_t)open((const char *)get_value_from_stack(f, 1));
       break;
     case SYS_FILESIZE:  /* Obtain a file's size. */
-	  (int)f->eax = filesize((int *)get_value_from_stack(f, 1));
+	  f->eax = (uint32_t)filesize((int *)get_value_from_stack(f, 1));
       break;
     case SYS_READ:      /* Read from a file. */
-	  int fd = (int)get_value_from_stack(f, 1);
-	  void *buffer = (void *)get_value_from_stack(f, 2);
+	  fd = (int)get_value_from_stack(f, 1);
+	  buffer = (void *)get_value_from_stack(f, 2);
 	  unsigned size = (unsigned)get_value_from_stack(f, 3);
-	  (int)f->eax = read(fd, buffer, size);
+	  f->eax = (uint32_t)read(fd, buffer, size);
       break;
     case SYS_WRITE:     /* Write to a file. */
-      int fd = (int)get_value_from_stack(f, 1);
-      void * buffer = (void *)get_value_from_stack(f, 2);
-      unsigned int size = (unsigned int)get_value_from_stack(f, 3);
-      int ret = write(fd, buffer, size);
+      fd = (int)get_value_from_stack(f, 1);
+      buffer = (void *)get_value_from_stack(f, 2);
+      unsigned int isize = (unsigned int)get_value_from_stack(f, 3);
+      ret = write(fd, buffer, isize);
       f->eax = (uint32_t)ret;
       break;
     case SYS_SEEK:      /* Change position in a file. */
-      int fd = (int)get_value_from_stack(f, 1);
+      fd = (int)get_value_from_stack(f, 1);
       unsigned int position = (unsigned int)get_value_from_stack(f, 2);
       seek(fd, position);
       break;
     case SYS_TELL:      /* Report current position in a file. */
-      int fd = (int)get_value_from_stack(f, 1);
-      unsigned int ret = tell(fd);
-      f->eax = (uint32_t)ret;
+      fd = (int)get_value_from_stack(f, 1);
+      unsigned int uret = tell(fd);
+      f->eax = (uint32_t)uret;
       break;
     case SYS_CLOSE:     /* Close a file. */
-      int fd = (int)get_value_from_stack(f, 1);
+      fd = (int)get_value_from_stack(f, 1);
       close(fd);
       break;
   }
