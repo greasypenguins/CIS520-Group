@@ -16,10 +16,10 @@
 #include "threads/synch.h"
 static void syscall_handler (struct intr_frame *);
 
-bool user_pointer_is_valid(void *);
+bool user_pointer_is_valid(const void *);
 
 /* Returns true if the pointer is valid */
-bool user_pointer_is_valid(void * ptr)
+bool user_pointer_is_valid(const void * ptr)
 {
   /* Null pointers and pointers to outside user memory are invalid */
   if((ptr == NULL        )
@@ -72,7 +72,7 @@ exit (int status) {
 
 pid_t
 exec (const char *cmd_line) {
-  if(!user_pointer_is_valid(cmd_line))
+  if(!user_pointer_is_valid((void *)cmd_line))
   {
     return -1;
   }
@@ -106,7 +106,7 @@ remove (const char *file) {
 
 int
 open (const char *file) {
-  if(!user_pointer_is_valid(file))
+  if(!user_pointer_is_valid((void *)file))
   {
     return -1;
   }
