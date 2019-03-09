@@ -67,20 +67,33 @@ syscall_handler (struct intr_frame *f)
       halt();
       break;
     case SYS_EXIT:      /* Terminate this process. */
+		int status = f->esp+1;
+		exit(status);
       //get status from stack
       //exit(int status);
       break;
     case SYS_EXEC:      /* Start another process. */
+		const char *cmd_line = f->esp+1;
+		pid_t ret = exec(const char *cmd_line);
+		f->eax = (int)ret;
       //get cmd_line from the stack
       //pid_t ret = exec(const char *cmd_line);
       //return ret on the stack
       break;
     case SYS_WAIT:      /* Wait for a child process to die. */
+	  pid_t pid = f->esp+1;
+	  
+	  int ret = wait(pid_t pid);
+	  f->eax = (int)ret;
       //get pid from the stack
       //int ret = wait(pid_t pid);
       //return ret on the stack
       break;
     case SYS_CREATE:    /* Create a file. */
+	  const char *file = f->esp+1;
+	  unsigned initial_size = f->esp+2;
+	  bool ret = create(const char *file, unsigned initial_size);
+	  f->eax = (int)ret;
       //get file from the stack
       //get initial_size from the stack
       //bool ret = create(const char *file, unsigned initial_size);
