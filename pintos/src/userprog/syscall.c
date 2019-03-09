@@ -15,9 +15,17 @@
 #include "filesys/filesys.h"
 #include "threads/synch.h"
 #include "lib/syscall-nr.h"
+
+int get_value_from_stack(struct intr_frame *, int);
+bool user_pointer_is_valid(const void *);
 static void syscall_handler (struct intr_frame *);
 
-bool user_pointer_is_valid(const void *);
+struct lock sys_lock; //lock to guarantee only one process is altering the file at a time
+
+int get_value_from_stack(struct intr_frame * f, int position)
+{
+  return *((int *)(f->esp) + position);
+}
 
 /* Returns true if the pointer is valid */
 bool user_pointer_is_valid(const void * ptr)
@@ -42,8 +50,6 @@ bool user_pointer_is_valid(const void * ptr)
   }
 }
 
-struct lock sys_lock; //lock to guarantee only one process is altering the file at a time
-
 void
 syscall_init (void)
 {
@@ -59,7 +65,7 @@ syscall_handler (struct intr_frame *f)
     return;
   }
 
-  int syscall_number = *((int *)(f->esp));
+  int syscall_number = get_value_from_stack(f, 0);
   switch(syscall_number)
   {
     /* Projects 2 and later. */
@@ -67,13 +73,13 @@ syscall_handler (struct intr_frame *f)
       halt();
       break;
     case SYS_EXIT:      /* Terminate this process. */
-		int status = (int)(*((int *)(f->esp+1)));
+		int status = (int)get_value_from_stack(f, 1);
 		exit(status);
       //get status from stack
       //exit(int status);
       break;
     case SYS_EXEC:      /* Start another process. */
-		const char *cmd_line = (const char *)(*((int *)(f->esp+1)));
+		const char *cmd_line = (const char *)get_value_from_stack(f, 1);
 		pid_t ret = exec(const char *cmd_line));
 		f->eax = (int)ret;
       //get cmd_line from the stack
@@ -81,7 +87,7 @@ syscall_handler (struct intr_frame *f)
       //return ret on the stack
       break;
     case SYS_WAIT:      /* Wait for a child process to die. */
-	  pid_t pid = (pid_t)(*((int *)(f->esp+1)));
+	  pid_t pid = (pid_t)get_value_from_stack(f, 1);
 	  
 	  int ret = wait(pid_t pid);
 	  f->eax = (int)ret;
@@ -90,8 +96,8 @@ syscall_handler (struct intr_frame *f)
       //return ret on the stack
       break;
     case SYS_CREATE:    /* Create a file. */
-	  const char *file = (const char*)(*((int *)(f->esp+1)));
-	  unsigned initial_size = (unsigned int)(*((int *)(f->esp+2)));
+	  const char *file = (const char*)get_value_from_stack(f, 1);
+	  unsigned initial_size = (unsigned int)get_value_from_stack(f, 2);
 	  bool ret = create(const char *file, unsigned initial_size);
 	  f->eax = (int)ret;
       //get file from the stack
@@ -100,39 +106,39 @@ syscall_handler (struct intr_frame *f)
       //return ret on the stack
       break;
     case SYS_REMOVE:    /* Delete a file. */
-      (bool)f->eax = remove((const char *)*(int *)(f->esp + 1));
+      (bool)f->eax = remove((const char *)get_value_from_stack(f, 1));
       break;
     case SYS_OPEN:      /* Open a file. */
-	  (int)f->eax = open((const char *)*(int *)(f->esp + 1));
+	  (int)f->eax = open((const char *)get_value_from_stack(f, 1));
       break;
     case SYS_FILESIZE:  /* Obtain a file's size. */
-	  (int)f->eax = filesize((int *)*(int *)(f->esp + 1));
+	  (int)f->eax = filesize((int *)get_value_from_stack(f, 1));
       break;
     case SYS_READ:      /* Read from a file. */
-	  int fd = (int)*(int *)(f->esp + 1);
-	  void *buffer = (void *)*(int *)(f->esp + 2);
-	  unsigned size = (unsigned)*(int *)(f->esp + 3);
+	  int fd = (int)get_value_from_stack(f, 1);
+	  void *buffer = (void *)get_value_from_stack(f, 2);
+	  unsigned size = (unsigned)get_value_from_stack(f, 3);
 	  (int)f->eax = read(fd, buffer, size);
       break;
     case SYS_WRITE:     /* Write to a file. */
-      int fd = (int)(*((int *)(f->esp)+1));
-      void * buffer = (void *)(*((int *)(f->esp)+2));
-      unsigned int size = (unsigned int)(*((int *)(f->esp)+3));
+      int fd = (int)get_value_from_stack(f, 1);
+      void * buffer = (void *)get_value_from_stack(f, 2);
+      unsigned int size = (unsigned int)get_value_from_stack(f, 3);
       int ret = write(fd, buffer, size);
       f->eax = (uint32_t)ret;
       break;
     case SYS_SEEK:      /* Change position in a file. */
-      int fd = (int)(*((int *)(f->esp)+1));
-      unsigned int position = (unsigned int)(*((int *)(f->esp)+2));
+      int fd = (int)get_value_from_stack(f, 1);
+      unsigned int position = (unsigned int)get_value_from_stack(f, 2);
       seek(fd, position);
       break;
     case SYS_TELL:      /* Report current position in a file. */
-      int fd = (int)(*((int *)(f->esp)+1));
+      int fd = (int)get_value_from_stack(f, 1);
       unsigned int ret = tell(fd);
       f->eax = (uint32_t)ret;
       break;
     case SYS_CLOSE:     /* Close a file. */
-      int fd = (int)(*((int *)(f->esp)+1));
+      int fd = (int)get_value_from_stack(f, 1);
       close(fd);
       break;
   }
