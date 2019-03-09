@@ -16,13 +16,13 @@
 #include "threads/synch.h"
 static void syscall_handler (struct intr_frame *);
 
-bool user_pointer_check(void *);
+bool user_pointer_is_valid(void *);
 
 /* Returns true if the pointer is valid */
-bool user_pointer_check(void * ptr)
+bool user_pointer_is_valid(void * ptr)
 {
   /* Null pointers and pointers to outside user memory are invalid */
-  if((ptr == NULL         )
+  if((ptr == NULL        )
   || (!is_user_vaddr(ptr)))
   {
     return false;
@@ -72,9 +72,11 @@ exit (int status) {
 
 pid_t
 exec (const char *cmd_line) {
-  if(*cmd_line == NULL) {
+  if(!user_pointer_is_valid(cmd_line))
+  {
     return -1;
   }
+
   lock_acquire(&sys_lock); // acquire lock before returning child PID
   pid_t new_id = (pid_t)process_execute(cmd_line);
   lock_release(&sys_lock);
@@ -104,6 +106,11 @@ remove (const char *file) {
 
 int
 open (const char *file) {
+  if(!user_pointer_is_valid(file))
+  {
+    return -1;
+  }
+
   struct thread * t = thread_current();
   struct file * f = filesys_open(file);
   if (f == NULL) {
@@ -133,6 +140,11 @@ filesize (int fd) {
 
 int
 read (int fd, void *buffer, unsigned size) {
+  if(!user_pointer_is_valid(buffer))
+  {
+    return -1;
+  }
+
   int data = file_read(thread_get_open_file(fd), buffer, size);
   if (data == 0) {
     return -1;
@@ -142,6 +154,11 @@ read (int fd, void *buffer, unsigned size) {
 
 int
 write (int fd, const void *buffer, unsigned size) {
+  if(!user_pointer_is_valid(buffer))
+  {
+    return -1;
+  }
+
   if (fd == 1) {
     lock_acquire(&sys_lock);
     putbuf(buffer,size); //implement correct call using this fucntion
