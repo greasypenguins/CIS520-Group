@@ -59,7 +59,7 @@ process_execute (const char *file_name)
     palloc_free_page (fn_copy);
     return TID_ERROR;
   }
-  strlcpy(fn_copy_tok, file_name, PGSIZE);
+  strlcpy(fn_copy_tok, file_name, (PGSIZE/2)-8);
 
   /* Tokenize input string.
      First token is the file name and the rest are args. */
@@ -120,7 +120,7 @@ start_process (void *file_name_)
   printf("Just added arg %d: %s\n", num_args, token);
   num_args++;
 
-  while(num_args < (PGSIZE / 4))
+  while(num_args < (((PGSIZE/2)-8) / 4))
   {
     printf("Top of while loop %d\n", num_args);
     /* Get the next argument */

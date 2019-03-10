@@ -1,0 +1,199 @@
+		           +--------------------------+
+				   |         CIS 520          |
+		           | PROJECT 2: USER PROGRAMS |
+		           |     DESIGN DOCUMENT      |
+		           +--------------------------+
+
+---- GROUP ----
+
+>> Fill in the names of your group members.
+
+Weston Harder
+Alex Marney
+Aswini Patro
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+We couldn't resolve a page fault happening when a user-context instruction
+tried to write to a nonexistent user-space page located almost directly less
+than PHYSBASE-PGSIZE. This halted our progress. However, we left in a hex_dump()
+call so you can verify that the argument passing is correctly filling the user stack.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course staff.
+
+http://www.scs.stanford.edu/10wi-cs140/pintos/pintos_3.html
+https://static1.squarespace.com/static/5b18aa0955b02c1de94e4412/t/5b85fad2f950b7b16b7a2ed6/1535507195196/Pintos+Guide
+
+			   ARGUMENT PASSING
+			   ================
+
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+---- ALGORITHMS ----
+
+>> A2: Briefly describe how you implemented argument parsing.  How do
+>> you arrange for the elements of argv[] to be in the right order?
+>> How do you avoid overflowing the stack page?
+
+In start_process(), we tokenized the raw input in a new page. As we
+iterated through the tokenizer, we stored the addresses of each argument
+in another page as well as the number of arguments. We passed these into
+setup_stack(), where we decrement esp as we store arguments in reverse
+order on the stack. Then, esp is rounded down to the nearest word boundary
+before we store the argument addresses themselves on the stack (first
+setting argv[argc] equal to 0). Finally, we store argc (number of
+arguments) and a fake return address (0).
+
+The stack page will not be overflown because the arguments and argument
+pointers are each restricted to (PGSIZE/2)-8 bytes while copying/tokenizing,
+leaving at least 16 bytes free. The padding bytes, argv[argc], argc, and
+return address will take a maximum of 15 bytes, so the stack's page cannot
+be filled completely.
+
+---- RATIONALE ----
+
+>> A3: Why does Pintos implement strtok_r() but not strtok()?
+
+>> A4: In Pintos, the kernel separates commands into an executable name
+>> and arguments.  In Unix-like systems, the shell does this
+>> separation.  Identify at least two advantages of the Unix approach.
+
+Less complexity in the kernel.
+More secure against kernel errors/panics.
+Fewer headaches for the poor engineering students.
+
+			     SYSTEM CALLS
+			     ============
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+
+
+>> B2: Describe how file descriptors are associated with open files.
+>> Are file descriptors unique within the entire OS or just within a
+>> single process?
+
+File descriptors are unique only within a single process, the process that
+currently has the files open. We put the fd value in the struct file and
+put a list of open files in each struct thread for easy access.
+
+---- ALGORITHMS ----
+
+>> B3: Describe your code for reading and writing user data from the
+>> kernel.
+
+Any pointers from the user are verified by new function user_pointer_is_valid()
+before use. user_pointer_is_valid() checks that pointers are non-null, user
+addresses, and refer to an existing page in the active page table directory
+using calls to vaddr.h and pagedir.h functions.
+
+>> B4: Suppose a system call causes a full page (4,096 bytes) of data
+>> to be copied from user space into the kernel.  What is the least
+>> and the greatest possible number of inspections of the page table
+>> (e.g. calls to pagedir_get_page()) that might result?  What about
+>> for a system call that only copies 2 bytes of data?  Is there room
+>> for improvement in these numbers, and how much?
+
+
+
+>> B5: Briefly describe your implementation of the "wait" system call
+>> and how it interacts with process termination.
+
+
+
+>> B6: Any access to user program memory at a user-specified address
+>> can fail due to a bad pointer value.  Such accesses must cause the
+>> process to be terminated.  System calls are fraught with such
+>> accesses, e.g. a "write" system call requires reading the system
+>> call number from the user stack, then each of the call's three
+>> arguments, then an arbitrary amount of user memory, and any of
+>> these can fail at any point.  This poses a design and
+>> error-handling problem: how do you best avoid obscuring the primary
+>> function of code in a morass of error-handling?  Furthermore, when
+>> an error is detected, how do you ensure that all temporarily
+>> allocated resources (locks, buffers, etc.) are freed?  In a few
+>> paragraphs, describe the strategy or strategies you adopted for
+>> managing these issues.  Give an example.
+
+
+
+---- SYNCHRONIZATION ----
+
+>> B7: The "exec" system call returns -1 if loading the new executable
+>> fails, so it cannot return before the new executable has completed
+>> loading.  How does your code ensure this?  How is the load
+>> success/failure status passed back to the thread that calls "exec"?
+
+exec() first checks for a valid pointer before proceeding. Then
+process_execute() takes over. Any errors in process_execute() immediately
+cause -1 to be returned to exec(), which returns the result to
+syscall_handler(). syscall_handler() returns the result to the user
+program by storing it at eax.
+
+>> B8: Consider parent process P with child process C.  How do you
+>> ensure proper synchronization and avoid race conditions when P
+>> calls wait(C) before C exits?  After C exits?  How do you ensure
+>> that all resources are freed in each case?  How about when P
+>> terminates without waiting, before C exits?  After C exits?  Are
+>> there any special cases?
+
+
+
+---- RATIONALE ----
+
+>> B9: Why did you choose to implement access to user memory from the
+>> kernel in the way that you did?
+
+The project document suggested that checking pointer validity was easier
+than handling the page faults, so we chose the easier option.
+
+>> B10: What advantages or disadvantages can you see to your design
+>> for file descriptors?
+
+It is fairly simple and easy to use. However, it may require some performance
+overhead when looking through the list of files.
+
+>> B11: The default tid_t to pid_t mapping is the identity mapping.
+>> If you changed it, what advantages are there to your approach?
+
+We did not change it.
+
+			   SURVEY QUESTIONS
+			   ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the course evaluations at the end of
+the quarter.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+Debugging page faults took a very large amount of time. GDB was far less
+useful because we couldn't get it to work with user programs, even using loadusersymbols.
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?

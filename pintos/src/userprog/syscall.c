@@ -37,10 +37,10 @@ bool user_pointer_is_valid(const void * ptr)
     return false;
   }
 
-  uint32_t * active_page_table_directory = active_pd();
+  uint32_t * active_page_table_directory = active_pd(); //Can also get with thread_current()->pagedir
 
   /* Pointer is valid only if it points to a page in the active page table directory */
-  if( lookup_page(active_page_table_directory, ptr, false) == NULL)
+  if( lookup_page(active_page_table_directory, ptr, false) == NULL) //Can also use pagedir_get_page
   {
     return false;
   }
