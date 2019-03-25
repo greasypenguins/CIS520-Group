@@ -28,6 +28,7 @@ call so you can verify that the argument passing is correctly filling the user s
 
 http://www.scs.stanford.edu/10wi-cs140/pintos/pintos_3.html
 https://static1.squarespace.com/static/5b18aa0955b02c1de94e4412/t/5b85fad2f950b7b16b7a2ed6/1535507195196/Pintos+Guide
+https://github.com/ChristianJHughes/pintos-project2
 
 			   ARGUMENT PASSING
 			   ================
@@ -37,6 +38,8 @@ https://static1.squarespace.com/static/5b18aa0955b02c1de94e4412/t/5b85fad2f950b7
 >> A1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+None.
 
 ---- ALGORITHMS ----
 
@@ -63,6 +66,9 @@ be filled completely.
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
 
+strtok_r requires that the user submits their own save_ptr, this allows the user
+to access the save_ptr location after it returns.
+
 >> A4: In Pintos, the kernel separates commands into an executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
@@ -79,6 +85,25 @@ Fewer headaches for the poor engineering students.
 >> B1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+thread.h
+	struct list open_files:
+	A list of open files that belong to this thread.
+	struct list child_list:
+	A list of processes that belong to this thread.
+	struct semaphore child_sema:
+	A semaphore used for synchronization of waiting threads.
+	int exit_status:
+	Holds the current exit status of a process.
+	struct list_elem child_elem:
+	An element used to track a processes existence in a list.
+	int cur_fd:
+	Denotes the current fd of a thread for future files.
+
+syscall.c
+	struct lock sys_lock:
+	Used to lock critical sections during system calls.
+
 
 
 
@@ -107,12 +132,22 @@ using calls to vaddr.h and pagedir.h functions.
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
 
+The least number of inspections of the table is 1. If it gets the desired data 
+on the first try, there is no reason to search further.
 
+The greatest number of checks could be up to 4,096 in the case that we have to
+check every individual address in the table.
+
+For 2 bytes of data, the least number is once again 1 for the same reason.
+
+The greatest number of checks will be 2 as well, for the same reason.
 
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
 
-
+While a process has children, it is searched for a matching child that was given 
+as an argument. If that child is found, it is removed from the list and placed in a semaphore.
+After placing the child into the semaphore, it's exit status is returned to be used when it exits.
 
 >> B6: Any access to user program memory at a user-specified address
 >> can fail due to a bad pointer value.  Such accesses must cause the
@@ -128,6 +163,13 @@ using calls to vaddr.h and pagedir.h functions.
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
 
+Error checking is done in it's own function, allowing us to minimize the number of calls
+required to verify a safe pointer. Locks aren't declared until after the values are checked.
+
+When a system call is performed, the first thing applicable states do is check for 
+valid pointers. if the pointer is invalid, the process immediately throws an exception.
+Since no locks had been declared to that point, there are no locks to deal with at the same
+time.
 
 
 ---- SYNCHRONIZATION ----
@@ -150,7 +192,13 @@ program by storing it at eax.
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
 
+When wait is called, the system verifies that the process exists. If it
+does, it is checked to see if it has data. If both of these checks are passed
+the system removes it from the list and places it in a semaphore, and returns its
+exit status.
 
+When a process exits it's pagedir is set to NULL, and the pagedir that was 
+previously referred to is destroyed.
 
 ---- RATIONALE ----
 

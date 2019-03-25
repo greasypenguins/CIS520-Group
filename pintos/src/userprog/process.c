@@ -38,11 +38,9 @@ process_execute (const char *file_name)
   tid_t tid;
   enum intr_level old_level;
 
-  printf("process_execute()\n");
 
   /* Make a copy of file_name.
      Otherwise there's a race between the caller and load(). */
-  printf("file_name: <start>%s<end>\n", file_name);
   fn_copy = (char *)palloc_get_page(0);
   if(fn_copy == NULL)
   {
@@ -50,7 +48,6 @@ process_execute (const char *file_name)
   }
   strlcpy(fn_copy, file_name, PGSIZE);
 
-  printf("fn_copy: <start>%s<end>\n", fn_copy);
 
   /* Copy file_name into a string that can be tokenized */
   fn_copy_tok = (char *)palloc_get_page(0);
@@ -72,8 +69,10 @@ process_execute (const char *file_name)
     palloc_free_page (fn_copy);
   }
   else {
+	enum intr_level old_level = intr_disable();
     struct thread * t = find_thread (tid);
     list_push_front (&thread_current()->child_list, &(t->child_elem)); //add thread to thread's child list
+	intr_set_level(old_level);
   }
 
   palloc_free_page(fn_copy_tok);
@@ -97,7 +96,6 @@ start_process (void *file_name_)
   char * save_ptr;
   int num_args = 0;
 
-  printf("start_process()\n");
 
   /* Allocate a page for pointers to the args */
   arg_ptrs = (char **)palloc_get_page(PAL_USER);
@@ -107,31 +105,25 @@ start_process (void *file_name_)
     thread_exit();
   }
 
-  printf("raw string: <start>%s<end>\n", file_name);
 
   /* Tokenize input string.
      First token is the file name and the rest are args. */
   token = strtok_r(file_name, " ", &save_ptr);
-  printf("token: %s\n", token);
 
   /* There is always at least one argument (the name of the executable) */
   /* Store this argument's address in the arg_ptrs list */
   arg_ptrs[num_args] = token;
-  printf("Just added arg %d: %s\n", num_args, token);
   num_args++;
 
   while(num_args < (((PGSIZE/2)-8) / 4))
   {
-    printf("Top of while loop %d\n", num_args);
     /* Get the next argument */
     token = strtok_r(NULL, " ", &save_ptr);
-    printf("token: %s\n", token);
     /* If there is an argument */
     if(token != NULL)
     {
       /* Store this argument's address in the arg_ptrs list */
       arg_ptrs[num_args] = token;
-      printf("Just added arg %d: %s\n", num_args, token);
       num_args++;
     }
     else
@@ -140,7 +132,6 @@ start_process (void *file_name_)
     }
   }
 
-  printf("num_args: %d\n", num_args);
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -152,11 +143,9 @@ start_process (void *file_name_)
   /* If load failed, quit. */
   palloc_free_page(file_name);
   palloc_free_page(arg_ptrs);
-  printf("end start_process() 1\n");
   if (!success)
     thread_exit ();
 
-  printf("end start_process() 2\n");
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -178,10 +167,7 @@ start_process (void *file_name_)
    does nothing. */
 int
 process_wait (tid_t child_tid UNUSED)
-{ //implement according to design document system call: wait method
-  //while(1) {
-  //}
-
+{
   //make sure child tid actually exists, return if not
   //get the child thread based on passed in tid, find in current_thread()'s child_list
   //wait on the child thread by sema_down()
@@ -206,7 +192,7 @@ process_wait (tid_t child_tid UNUSED)
   }
 
   list_remove(&child_thread->child_elem);
-  sema_down(&child_thread->child_wait);
+  sema_down(&child_thread->child_sema);
 
   return child_thread->exit_status;
 }
@@ -335,8 +321,6 @@ load(const char * file_name, char ** arg_ptrs, int num_args, void (**eip) (void)
   bool success = false;
   int i;
 
-  printf("load()\n");
-
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL)
@@ -438,7 +422,6 @@ load(const char * file_name, char ** arg_ptrs, int num_args, void (**eip) (void)
   file_close (file);
   lock_release(&filesys_lock);
 
-  printf("end load()\n");
   return success;
 }
 
@@ -559,15 +542,13 @@ setup_stack (void **esp, char ** arg_ptrs, int num_args)
   bool success = false;
   size_t arg_len;
 
-  printf("setup_stack()\n");
-
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
       {
-        *esp = PHYS_BASE;
+        *esp = PHYS_BASE - 12;
         //*esp = (void *)((char *)PHYS_BASE - 12);
 
         /* Insert argv array and argc into the stack based on 80x86 calling convention */
@@ -576,7 +557,6 @@ setup_stack (void **esp, char ** arg_ptrs, int num_args)
         for(int i = num_args - 1; i >= 0; i--)
         {
           arg_len = strlen(arg_ptrs[i]) + 1;
-          printf("arg_len=%u\n", arg_len);
           /* Decrement stack pointer to have enough space for the next arg */
           *esp = (void *)(((char *)(*esp)) - arg_len);
           
@@ -621,7 +601,6 @@ setup_stack (void **esp, char ** arg_ptrs, int num_args)
         palloc_free_page (kpage);
     }
 
-  printf("end setup_stack()\n");
   return success;
 }
 

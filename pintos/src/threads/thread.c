@@ -638,10 +638,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->donated_priority = 0;
   list_init(&(t->open_files));
   list_init(&(t->locks_held));
-  sema_init(&(t->child_wait), 0);
+  sema_init(&(t->child_sema), 0);
   t->exit_status = -1;
   list_init(&(t->child_list));
   t->waiting_on_lock = NULL;
+  t->cur_fd = 2;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
