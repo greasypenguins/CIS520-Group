@@ -220,6 +220,24 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+
+  struct list_elem *temp;
+  int fd = cur->cur_fd;
+
+  while(fd>2) {
+    close(fd-1);
+    fd--;
+  }
+/*
+  while(!list_empty(&cur->child_list)){
+    for(temp = list_front(&thread_current()->child_list); temp != NULL; temp = temp->next) {
+      struct thread *t = list_entry(temp,struct thread, child_elem);
+      t->exit_status = 0;
+      list_remove(t);
+    }
+  }
+*/
+  sema_up(&cur->child_sema);
 }
 
 /* Sets up the CPU for running user code in the current
@@ -595,7 +613,7 @@ setup_stack (void **esp, char ** arg_ptrs, int num_args)
         *esp = (char *)(*esp) - 4;
         *((void **)(*esp)) = NULL;
 
-        hex_dump((uintptr_t)(*esp), *esp, (int)(((char *)PHYS_BASE) - ((char *)(*esp))), true);
+       // hex_dump((uintptr_t)(*esp), *esp, (int)(((char *)PHYS_BASE) - ((char *)(*esp))), true);
       }
       else
         palloc_free_page (kpage);

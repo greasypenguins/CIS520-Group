@@ -194,8 +194,9 @@ void halt (void)
 void exit (int status)
 {
 	thread_current()->exit_status = status;
-	printf("Thread: %s, exit(%d)\n",thread_current()->name, status);
-    thread_exit ();
+	printf("%s: exit(%d)\n",thread_current()->name, status);
+        thread_exit();
+        process_exit();
 }
 
 //Writes data to a given file from buffer, with length 'length'
