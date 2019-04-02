@@ -52,8 +52,11 @@ page_for_addr (const void *address)
 
       /* No page.  Expand stack? */
 
-/* add code */
-
+	  if (p.addr > PHYS_BASE - STACK_MAX) { //Verify page is meant for stack memory
+		  if (thread_current()->user_esp - 32 < address) { //Verify that the memory size isn't larger than 32 bytes using frame esp member
+			  return page_allocate(address, false); //Allocate page with given address, and not read only to be eligible for eviction?
+		  }
+       }
     }
   return NULL;
 }
@@ -144,16 +147,25 @@ page_out (struct page *p)
      process to fault.  This must happen before checking the
      dirty bit, to prevent a race with the process dirtying the
      page. */
+  /* Mark page not present in page table. */
+  pagedir_clear_page(p->thread->pagedir, (void *) p->addr);
 
-/* add code here */
+  /* If dirty is true, page has been modified.*/
+  dirty = pagedir_is_dirty(p->thread->pagedir, (const void *) p->addr);
 
-  /* Has the frame been modified? */
-
-/* add code here */
-
-  /* Write frame contents to disk if necessary. */
-
-/* add code here */
+  /* Because page was modified, data must be saved. 
+     Write to swap if private, file if not. */
+  if (dirty) 
+  {
+	if (p->private) 
+	{
+		ok = swap_out(p);
+	}
+	else 
+	{
+		ok = file_write_at(p->file, p->frame->base, p->file_bytes, p->file_offset);
+	}
+  }
 
   return ok;
 }

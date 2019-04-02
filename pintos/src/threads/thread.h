@@ -2,6 +2,7 @@
 #define THREADS_THREAD_H
 
 #include <debug.h>
+#include <hash.h>
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
@@ -89,48 +90,55 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    int donated_priority;               /* Priority after donation from other threads */
     struct list_elem allelem;           /* List element for all threads list. */
 
-    /* Used by synch.c */
-    struct list_elem donor_elem;        /* List element for priority donation. */
-    struct lock * waiting_on_lock;      /* Lock pointer for locks the thread is waiting on. */
-    struct list locks_held;             /* List for the locks held by a thread. */
-
-    /* Owned by timer.c */
-    struct list_elem timer_elem;        /* List element */
-    int64_t sleep_tick;                 /* Sleep until this tick */
+    /* Owned by process.c. */
+    int exit_code;                      /* Exit code. */
+    struct wait_status *wait_status;    /* This process's completion status. */
+    struct list children;               /* Completion status of children. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    /* Alarm clock. */
+    int64_t wakeup_time;                /* Time to wake this thread up. */
+    struct list_elem timer_elem;        /* Element in timer_wait_list. */
+    struct semaphore timer_sema;        /* Semaphore. */
 
-#ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+    struct hash *pages;                 /* Page table. */
+    struct file *bin_file;              /* The binary executable. */
 
-    /* Used by syscall.c */
-    struct list open_files;
+    /* Owned by syscall.c. */
+    struct list fds;                    /* List of file descriptors. */
+    struct list mappings;               /* Memory-mapped files. */
+    int next_handle;                    /* Next handle value. */
+    void *user_esp;                     /* User's stack pointer. */
 
-    /* Used by process.c */
-    struct list child_list;             /* List of child processes */
-    struct semaphore child_sema;        /* semaphore to wait on thread with */
-    int exit_status;                    /*status to be read when thread exits */
-    struct list_elem child_elem;        /*element for thread child process */
-#endif
-
-	int cur_fd;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+  };
+
+/* Tracks the completion of a process.
+   Reference held by both the parent, in its `children' list,
+   and by the child, in its `wait_status' pointer. */
+struct wait_status
+  {
+    struct list_elem elem;              /* `children' list element. */
+    struct lock lock;                   /* Protects ref_cnt. */
+    int ref_cnt;                        /* 2=child and parent both alive,
+                                           1=either child or parent alive,
+                                           0=child and parent both dead. */
+    tid_t tid;                          /* Child thread id. */
+    int exit_code;                      /* Child exit code, if dead. */
+    struct semaphore dead;              /* 1=child alive, 0=child dead. */
   };
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
-
-bool priority_less_func(const struct list_elem *, const struct list_elem *, void *); /* Function used in sorted list insertion */
-bool donor_priority_less_func(const struct list_elem *, const struct list_elem *, void *); /*Function used in sorted list function, utilizes donor element. */
 
 void thread_init (void);
 void thread_start (void);
@@ -155,18 +163,12 @@ void thread_yield (void);
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
 
-void thread_set_priority (int); 			/* Sets a threads priority to a given value. */
-void thread_reorder_ready_list(struct thread *); 	/* Reorders the ready list after new priorities have been assigned. */
-int thread_get_priority (void); 			/* Gets the priority of the current thread. */
-int thread_get_donated_priority(struct thread *); 	/* Gets the donated priority of the current thread. */
-void thread_recalculate_donated_priority(struct thread * t);	/*Recalculates the total priority as a result of donation. */
+int thread_get_priority (void);
+void thread_set_priority (int);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
-struct file * thread_get_open_file(int);
-struct thread *find_thread (tid_t);
 
 #endif /* threads/thread.h */

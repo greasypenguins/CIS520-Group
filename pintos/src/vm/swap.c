@@ -73,8 +73,11 @@ swap_out (struct page *p)
 
   p->sector = slot * PAGE_SECTORS;
 
-  // Write out page sectors
-/* add code here */ 
+  /* For each block, write out sectors up to new buffer length based on sector size. */
+  for (i = 0; i < PAGE_SECTORS; i++) 
+  {
+	  block_write(swap_device, p->sector + i, p->frame->base + i * BLOCK_SECTOR_SIZE);//might not be the right variables, block_write found in src/devices/block.*
+  }
  
   p->private = false;
   p->file = NULL;

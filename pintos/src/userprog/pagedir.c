@@ -6,6 +6,7 @@
 #include "threads/pte.h"
 #include "threads/palloc.h"
 
+static uint32_t *active_pd (void);
 static void invalidate_pagedir (uint32_t *);
 
 /* Creates a new page directory that has mappings for kernel
@@ -34,15 +35,7 @@ pagedir_destroy (uint32_t *pd)
   ASSERT (pd != init_page_dir);
   for (pde = pd; pde < pd + pd_no (PHYS_BASE); pde++)
     if (*pde & PTE_P) 
-      {
-        uint32_t *pt = pde_get_pt (*pde);
-        uint32_t *pte;
-        
-        for (pte = pt; pte < pt + PGSIZE / sizeof *pte; pte++)
-          if (*pte & PTE_P) 
-            palloc_free_page (pte_get_page (*pte));
-        palloc_free_page (pt);
-      }
+      palloc_free_page (pde_get_pt (*pde));
   palloc_free_page (pd);
 }
 
@@ -52,7 +45,7 @@ pagedir_destroy (uint32_t *pd)
    on CREATE.  If CREATE is true, then a new page table is
    created and a pointer into it is returned.  Otherwise, a null
    pointer is returned. */
-uint32_t *
+static uint32_t *
 lookup_page (uint32_t *pd, const void *vaddr, bool create)
 {
   uint32_t *pt, *pde;
@@ -230,7 +223,7 @@ pagedir_activate (uint32_t *pd)
 }
 
 /* Returns the currently active page directory. */
-uint32_t *
+static uint32_t *
 active_pd (void) 
 {
   /* Copy CR3, the page directory base register (PDBR), into

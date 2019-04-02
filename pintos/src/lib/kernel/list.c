@@ -1,6 +1,5 @@
 #include "list.h"
 #include "../debug.h"
-#include <stdio.h>
 
 /* Our doubly linked lists have two header elements: the "head"
    just before the first element and the "tail" just after the
@@ -61,13 +60,11 @@ is_tail (struct list_elem *elem)
 void
 list_init (struct list *list)
 {
-//  printf("Initializing list");
   ASSERT (list != NULL);
   list->head.prev = NULL;
   list->head.next = &list->tail;
   list->tail.prev = &list->head;
   list->tail.next = NULL;
-//  printf("Done initializing list");
 }
 
 /* Returns the beginning of LIST.  */
@@ -84,9 +81,7 @@ list_begin (struct list *list)
 struct list_elem *
 list_next (struct list_elem *elem)
 {
-//  printf("Finding next element");
   ASSERT (is_head (elem) || is_interior (elem));
-//  printf("Done finding next element");
   return elem->next;
 }
 
@@ -105,7 +100,7 @@ list_end (struct list *list)
 /* Returns the LIST's reverse beginning, for iterating through
    LIST in reverse order, from back to front. */
 struct list_elem *
-list_rbegin (struct list *list)
+list_rbegin (struct list *list) 
 {
   ASSERT (list != NULL);
   return list->tail.prev;
@@ -135,7 +130,7 @@ list_prev (struct list_elem *elem)
         }
 */
 struct list_elem *
-list_rend (struct list *list)
+list_rend (struct list *list) 
 {
   ASSERT (list != NULL);
   return &list->head;
@@ -147,13 +142,13 @@ list_rend (struct list *list)
    through a list, e.g.:
 
       e = list_head (&list);
-      while ((e = list_next (e)) != list_end (&list))
+      while ((e = list_next (e)) != list_end (&list)) 
         {
           ...
         }
 */
 struct list_elem *
-list_head (struct list *list)
+list_head (struct list *list) 
 {
   ASSERT (list != NULL);
   return &list->head;
@@ -161,7 +156,7 @@ list_head (struct list *list)
 
 /* Return's LIST's tail. */
 struct list_elem *
-list_tail (struct list *list)
+list_tail (struct list *list) 
 {
   ASSERT (list != NULL);
   return &list->tail;
@@ -253,11 +248,9 @@ list_push_back (struct list *list, struct list_elem *elem)
 struct list_elem *
 list_remove (struct list_elem *elem)
 {
-//  printf("Removing from list");
   ASSERT (is_interior (elem));
   elem->prev->next = elem->next;
   elem->next->prev = elem->prev;
-//  printf("Done removing from list");
   return elem->next;
 }
 
@@ -266,10 +259,8 @@ list_remove (struct list_elem *elem)
 struct list_elem *
 list_pop_front (struct list *list)
 {
-//  printf("Popping from front of list");
   struct list_elem *front = list_front (list);
   list_remove (front);
-//  printf("Done popping from front of list");
   return front;
 }
 
@@ -301,24 +292,6 @@ list_back (struct list *list)
   return list->tail.prev;
 }
 
-/* Returns the nth position element in LIST.
-   Undefined behavior if LIST is empty. */
-struct list_elem *
-list_index (struct list *list, unsigned int position)
-{
-  ASSERT (!list_empty (list));
-  ASSERT (list_size(list)>position); //make sure size of list is greater than desired index return
-  struct list_elem *temp = NULL; //list elem to return
-
-  temp = &list->head;
-  for (unsigned int i=0; i<=position; i++) //iterate through the list till at index "position"
-  {
-    temp = temp->next;
-  }
-
-  return temp; //return nth index element
-}
-
 /* Returns the number of elements in LIST.
    Runs in O(n) in the number of elements. */
 size_t
@@ -326,10 +299,9 @@ list_size (struct list *list)
 {
   struct list_elem *e;
   size_t cnt = 0;
-//  printf("Finding list size");
+
   for (e = list_begin (list); e != list_end (list); e = list_next (e))
     cnt++;
-//  printf("Done finding list size");
   return cnt;
 }
 
@@ -342,7 +314,7 @@ list_empty (struct list *list)
 
 /* Swaps the `struct list_elem *'s that A and B point to. */
 static void
-swap (struct list_elem **a, struct list_elem **b)
+swap (struct list_elem **a, struct list_elem **b) 
 {
   struct list_elem *t = *a;
   *a = *b;
@@ -353,7 +325,7 @@ swap (struct list_elem **a, struct list_elem **b)
 void
 list_reverse (struct list *list)
 {
-  if (!list_empty (list))
+  if (!list_empty (list)) 
     {
       struct list_elem *e;
 
@@ -371,7 +343,7 @@ is_sorted (struct list_elem *a, struct list_elem *b,
            list_less_func *less, void *aux)
 {
   if (a != b)
-    while ((a = list_next (a)) != b)
+    while ((a = list_next (a)) != b) 
       if (less (a, list_prev (a), aux))
         return false;
   return true;
@@ -390,8 +362,8 @@ find_end_of_run (struct list_elem *a, struct list_elem *b,
   ASSERT (b != NULL);
   ASSERT (less != NULL);
   ASSERT (a != b);
-
-  do
+  
+  do 
     {
       a = list_next (a);
     }
@@ -417,9 +389,9 @@ inplace_merge (struct list_elem *a0, struct list_elem *a1b0,
   ASSERT (is_sorted (a1b0, b1, less, aux));
 
   while (a0 != a1b0 && a1b0 != b1)
-    if (!less (a1b0, a0, aux))
+    if (!less (a1b0, a0, aux)) 
       a0 = list_next (a0);
-    else
+    else 
       {
         a1b0 = list_next (a1b0);
         list_splice (a0, list_prev (a1b0), a1b0);
@@ -474,7 +446,6 @@ void
 list_insert_ordered (struct list *list, struct list_elem *elem,
                      list_less_func *less, void *aux)
 {
-  //printf("list_insert_ordered()\n");
   struct list_elem *e;
 
   ASSERT (list != NULL);
@@ -484,7 +455,6 @@ list_insert_ordered (struct list *list, struct list_elem *elem,
   for (e = list_begin (list); e != list_end (list); e = list_next (e))
     if (less (elem, e, aux))
       break;
-  //printf("list_insert_ordered(): Stopping\n");
   return list_insert (e, elem);
 }
 
@@ -505,7 +475,7 @@ list_unique (struct list *list, struct list *duplicates,
 
   elem = list_begin (list);
   while ((next = list_next (elem)) != list_end (list))
-    if (!less (elem, next, aux) && !less (next, elem, aux))
+    if (!less (elem, next, aux) && !less (next, elem, aux)) 
       {
         list_remove (next);
         if (duplicates != NULL)
@@ -523,13 +493,13 @@ struct list_elem *
 list_max (struct list *list, list_less_func *less, void *aux)
 {
   struct list_elem *max = list_begin (list);
-  if (max != list_end (list))
+  if (max != list_end (list)) 
     {
       struct list_elem *e;
-
+      
       for (e = list_next (max); e != list_end (list); e = list_next (e))
         if (less (max, e, aux))
-          max = e;
+          max = e; 
     }
   return max;
 }
@@ -542,13 +512,13 @@ struct list_elem *
 list_min (struct list *list, list_less_func *less, void *aux)
 {
   struct list_elem *min = list_begin (list);
-  if (min != list_end (list))
+  if (min != list_end (list)) 
     {
       struct list_elem *e;
-
+      
       for (e = list_next (min); e != list_end (list); e = list_next (e))
         if (less (e, min, aux))
-          min = e;
+          min = e; 
     }
   return min;
 }
