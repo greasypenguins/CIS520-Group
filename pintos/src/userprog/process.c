@@ -189,7 +189,6 @@ process_exit (void)
     }
 
   /* Destroy the page hash table. */
-
   page_exit ();
   
   /* Close executable (and allow writes). */
