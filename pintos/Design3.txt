@@ -1,0 +1,174 @@
+		           +---------------------------+
+       	           |         CIS 520           |
+		           | PROJECT 3: Virtual Memory |
+		           |     DESIGN DOCUMENT       |
+		           +---------------------------+
+
+---- GROUP ----
+
+>> Fill in the names of your group members.
+
+Alexander Marney
+Weston Harder
+Aswini Patro
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course staff.
+
+https://github.com/rpwilliams/CIS520_Proj3
+
+			PAGE TABLE MANAGEMENT
+			=====================
+
+---- ALGORITHMS ----
+
+>> A1: In a few paragraphs, describe the existing code for locating the
+>> frame, if any, that contains the data of a given page.
+
+	Individual pages have a frame pointer that points to the frame that
+	contains the page data, while individual frames have a page pointer
+	that points to the page that it is mapped to. Beyond this, the 'frame'
+	struct has a variable 'base' that points to the virtual base address for
+	it's data. 
+	
+	Frames are allocated using the 'try_frame_alloc_and_lock' and the
+	'frame_alloc_and_lock' methods in frame.c. The 'frame_alloc_and_lock' method 
+	calls the 'try_frame_alloc_and_lock' up to 3 times, waiting 1 second 
+	between tries until a frame is found or it fails. 
+	
+	The 'try_frame_alloc_and_lock' method first searches for an empty
+	frame, acquiring it if one is found. If an empty frame is not found
+	it instead searches for a frame to evict. If it doesn't find a frame 
+	to evict, it returns NULL, where 'frame_alloc_and_lock' continues 
+	either trying again or returning failure.
+	
+	
+
+---- SYNCHRONIZATION ----
+
+>> A2: When two user processes both need a new frame at the same time,
+>> how are races avoided?
+
+	Races are avoided using 'scan_lock' within 'frame.c' and an internal lock within the 
+	'frame' struct. When a frame is being searched for, the process acquires scan_lock and 
+	begins to search for a frame, by searching through all frames for a frame
+	that is not internally locked. When one is found it acquires the frame lock,
+	releases the scan lock, and returns. 
+	
+	When a frame is found in addition to acquiring it's lock, the page's frame
+	field is set to the found frame.
+	
+
+		       PAGING TO AND FROM DISK
+		       =======================
+
+---- ALGORITHMS ----
+
+>> B1: When a frame is required but none is free, some frame must be
+>> evicted.  Describe the algorithm used to choose a frame to evict.
+
+	The algorithm used to evict frames is the LRU algorithm, and it's used
+	in the 'try_frame_alloc_and_lock' method. When it finds that there are 
+	no free frames available, it begins to search for a frame to evict. 
+	It uses the size_t 'hand' variable to keep track of where it is currently 
+	located in the memory allocated to frames, checking if it has overstepped
+	memory and setting it to 0 if so to avoid accessing the wrong data. 
+	
+	If the frame's lock is in use, it checks to see if the page that is linked
+	to the frame was recently accessed using the 'page_accessed_recently' method.
+	If the frame's page was recently accessed, it moves to the next frame, otherwise
+	it releases the scan_lock and evicts the current page, before setting the
+	frame's page value to the current page.
+
+>> B2: Explain your heuristic for deciding whether a page fault for an
+>> invalid virtual address should cause the stack to be extended into
+>> the page that faulted.
+
+	Initially, we check to see if the address is within the current stack. If it's 
+	beyond the stack, it moves on to check if the given address is within 32 bytes
+	of the stack pointer since PUSHA pushes 32 bytes.
+	
+
+			 MEMORY MAPPED FILES
+			 ===================
+
+---- DATA STRUCTURES ----
+
+>> C1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+	N/A
+
+---- ALGORITHMS ----
+
+>> C2: Describe how memory mapped files integrate into your virtual
+>> memory subsystem.  Explain how the page fault and eviction
+>> processes differ between swap pages and other pages.
+
+	Memory mapped files are integrated into the VM subsystem using the 
+	'mapping' struct in syscall.c. When a page fault occurs the system
+	searches for a page to evict.
+	
+	When a page is being evicted, it calls 'page_out' in page.c. In 'page_out' 
+	the system removes the page from the page table, and checks to see if it is 
+	'dirty'. If the page is dirty, it checks to see if it is private. If the page
+	is private it swaps the page out to swap, if the page isn't private, it writes 
+	the data back to it's file. However, if the page isn't dirty it simply clears 
+	the frame because there's nothing new to save.
+
+>> C3: Explain how you determine whether a new file mapping overlaps
+>> any existing segment.
+
+	In 'page_allocate' in page.c, when the system is mapping a new file it calls
+	'hash_insert' in hash.c. If there is a duplicate hash_elem already in the hash 
+	table, 'hash_insert' returns NULL, and the system instead frees the page.
+
+---- RATIONALE ----
+
+>> C4: Mappings created with "mmap" have similar semantics to those of
+>> data demand-paged from executables, except that "mmap" mappings are
+>> written back to their original files, not to swap.  This implies
+>> that much of their implementation can be shared.  Explain why your
+>> implementation either does or does not share much of the code for
+>> the two situations.
+
+	The code is mostly shared within our system, pages are handled with the same
+	methods, and the implementations split only when the system checks the status
+	of the 'private' field in the 'page' struct in the 'page_out' method. This field
+	determines whether the page will be written back to the disk or swapped out. If
+	the page is private, it is swapped, otherwise it is written to the file.
+	
+	It is implemented this way because it is far simpler to branch the implementations at
+	this point rather than to write two seperate methods, and whatever work would come beyond
+	that.
+
+			   SURVEY QUESTIONS
+			   ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the course evaluations at the end of
+the quarter.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?
