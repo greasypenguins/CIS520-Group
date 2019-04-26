@@ -21,18 +21,17 @@ void thandle(int);
 void open_file()
 {
 	FILE *file;
-	errno_t err;
-	err = fopen_s(&file, FILENAME, "r");
+	file = fopen(FILENAME, "r");
 	if (file == NULL)
 	{
-		perror(file);
+		perror(FILENAME);
 		return;
 	}
 	int count = 0;
 	char next[LINE_LENGTH];
 	while (fgets(next, LINE_LENGTH, file) != NULL)
 	{
-		strcpy_s(data[count], LINE_LENGTH, next);
+		strncpy(data[count], next, LINE_LENGTH);
 		count++;
 	}
 
@@ -54,7 +53,7 @@ void thandle(int tid) {
 			char *s2 = data[j + 1];
 			uint32 l1 = strlen(s1);
 			uint32 l2 = strlen(s2);
-			char *ret[LINE_LENGTH];
+			char ret[LINE_LENGTH];
 			uint32 ml;
 			ml = lcs_dynamic(ret, s1, l1, s2, l2);
 			if (ml > 0)
