@@ -1,3 +1,8 @@
+/*
+Command to compile:
+gcc p4_omp.c -fopenmp -o p4_omp
+*/
+
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>

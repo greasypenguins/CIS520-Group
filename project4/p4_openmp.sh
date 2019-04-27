@@ -1,6 +1,25 @@
 #!/bin/bash
+
+#SBATCH --mem-per-cpu=2G
+
+## Max time 1 minute
+#SBATCH --time=0:01:00
+
+## Use 1 core
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=1
+
 #SBATCH --constraint=elves
-srun p4_omp.c
+
+## Job title
+#SBATCH -J SGTYES
+
+## Send email for all updates
+#SBATCH --mail-type=ALL
+
+srun p4_omp
+
+
 
 
 ## A Sample sbatch script created by Kyle Hutson

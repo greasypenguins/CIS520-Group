@@ -1,3 +1,8 @@
+/*
+Command to compile:
+gcc p4_pth.c -o p4_pth
+*/
+
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
