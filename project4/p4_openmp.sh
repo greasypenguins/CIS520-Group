@@ -5,9 +5,12 @@
 ## Max time 1 minute
 #SBATCH --time=0:01:00
 
-## Use 1 core
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=1
+## Use 1 node
+## If commented: Use any number of nodes
+##SBATCH --nodes=1
+
+## Use 1 core total (across all nodes)
+#SBATCH --ntasks=1
 
 #SBATCH --constraint=elves
 
