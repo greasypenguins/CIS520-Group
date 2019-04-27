@@ -1,7 +1,3 @@
-/**************************************************************************
-*        THIS FILE STILL NEEDS A LOT OF UPDATING TO MATCH p4_omp.c        *
-***************************************************************************/
-
 /*
 Command to compile:
 gcc p4_pth.c -o p4_pth
@@ -22,76 +18,87 @@ gcc p4_pth.c -o p4_pth
 typedef unsigned long int uint32;
 typedef unsigned int uint16;
 
-char data[NUM_LINES][LINE_LENGTH];
+uint32 actual_num_lines; /* Number of lines successfully read from file */
+char data[NUM_LINES][LINE_LENGTH]; /* All data read in from file */
+char lcs_data[NUM_LINES - 1][LINE_LENGTH]; /* longest common substrings */
 
 void open_file(void);
 uint32 lcs_dynamic(char*, const char*, uint32, const char*, uint32);
 void thandle(int);
 
-void open_file()
-{
+void open_file() 
+{	
+	int count;
 	FILE *file;
+
 	file = fopen(FILENAME, "r");
 	if (file == NULL)
 	{
 		perror(FILENAME);
 		return;
 	}
-	int count = 0;
-	char next[LINE_LENGTH];
-	while((count < NUM_LINES                     )
-	   && (fgets(next, LINE_LENGTH, file) != NULL))
+
+	for(count = 0; count < NUM_LINES; count++)
 	{
-		strncpy(data[count], next, LINE_LENGTH);
-		count++;
+		if(fgets(data[count], LINE_LENGTH, file) == NULL)
+		{
+			break;
+		}
 	}
+
+	actual_num_lines = count;
 
 	fclose(file);
 }
 
 
 void thandle(int tid) {
-	uint32 start, end;
-	uint32 line_number;
-	//#pragma omp private (tid, start, end, j)
+	char temp[LINE_LENGTH]; /* temporary string storage     */
+	char ret[LINE_LENGTH];  /* formatted string with lcs    */
+	char * s1;              /* pointer to string 1          */
+	char * s2;              /* pointer to string 2          */
+	uint32 len_lcs;         /* length of lcs                */
+	uint32 line_number;     /* index into data for s1       */
+	uint32 start;           /* index into data for first s1 */
+	uint32 end;             /* index into data for last s2  */
+
+	//#pragma omp private (tid, temp, ret, s1, s2, len_lcs, line_number, start, end)
 	{
 		start = tid * NUM_LINES_PER_THREAD;
 		end = start + NUM_LINES_PER_THREAD;
 
 		/* Avoid reading past the end of data */
-		if(end > (NUM_LINES - 1))
+		if(end > (actual_num_lines - 1))
 		{
-			end = NUM_LINES - 1;
+			end = actual_num_lines - 1;
 		}
 
 		for (line_number = start; line_number < end; line_number++)
 		{
-			char *s1 = data[line_number];
-			char *s2 = data[line_number + 1];
-			uint32 l1 = strlen(s1);
-			uint32 l2 = strlen(s2);
-			char ret[LINE_LENGTH];
-			uint32 ml;
-			ml = lcs_dynamic(ret, s1, l1, s2, l2);
-			if (ml > 0)
+			s1 = data[line_number];
+			s2 = data[line_number + 1];
+
+			len_lcs = lcs_dynamic(ret, s1, strlen(s1), s2, strlen(s2));
+			if (len_lcs > 0)
 			{
-				printf("%3u - %3u: %s\n", line_number, line_number + 1, ret);
+				strcpy(lcs_data[line_number], ret);
 			}
 			else
 			{
-
-				printf("%3u - %3u: No common substring.\n", line_number, line_number + 1);
+				strcpy(lcs_data[line_number], "No common substring.");
 			}
 
 		}
 	}
+
+	return;
 }
 
 /*
 Find the longest common substring
 Options are:
-suffix tree         O(m + n)
-dynamic programming O(m * n)
+	suffix tree         O(m + n)
+	dynamic programming O(m * n)
 Dynamic programming is easier though
 
 ~dan/625/wiki_dump.txt
@@ -122,7 +129,7 @@ uint32 lcs_dynamic(char * ret, const char * a, uint32 a_size, const char * b, ui
 
 	uint16 ** substring_lengths; /* uint16 limits max substring length to about 65535 characters, which is more than we need */
 
-								 /* Allocate space for array */
+	/* Allocate space for array */
 	substring_lengths = (uint16 **)malloc(sizeof(uint16 *) * a_size);
 	for (a_idx = 0; a_idx < a_size; a_idx++)
 	{
@@ -183,8 +190,10 @@ uint32 lcs_dynamic(char * ret, const char * a, uint32 a_size, const char * b, ui
 
 
 
-main()
+int main(void)
 {
+	int i; /* Loop counter */
+
 	//struct timeval t1, t2, t3;
 	pthread_t threads[NUM_THREADS];
 	pthread_attr_t attr;
@@ -215,6 +224,13 @@ main()
 		}
 	}
 
+	for(i = 0; i < actual_num_lines - 1; i++)
+	{
+		printf("%3u - %3u: %s\n", i, i + 1, lcs_data[i]);
+	}
+
 	printf("Program Completed. \n");
 	pthread_exit(NULL);
+
+	return 0;
 }
