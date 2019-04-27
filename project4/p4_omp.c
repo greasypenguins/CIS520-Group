@@ -10,15 +10,17 @@ gcc p4_omp.c -fopenmp -o p4_omp
 //#include <sys/time.h>
 
 #define NUM_THREADS 1
-#define NUM_LINES 20 //reduced for testing purposes
-#define LINE_LENGTH 2005 //reduced for testing purposes
-#define FILENAME "/homes/dan/625/wiki_dump.txt" //file of interest
+#define NUM_LINES 20
+#define LINE_LENGTH 2005
+#define FILENAME "/homes/dan/625/wiki_dump.txt"
 #define NUM_LINES_PER_THREAD (NUM_LINES / NUM_THREADS)
 
 typedef unsigned long int uint32;
 typedef unsigned int uint16;
 
-char data[NUM_LINES][LINE_LENGTH];
+uint32 actual_num_lines; /* Number of lines successfully read from file */
+char data[NUM_LINES][LINE_LENGTH]; /* All data read in from file */
+char lcs_data[NUM_LINES - 1][LINE_LENGTH]; /* longest common substrings */
 
 void open_file(void);
 uint32 lcs_dynamic(char*, const char*, uint32, const char*, uint32);
@@ -26,64 +28,70 @@ void thandle(int);
 
 void open_file() 
 {	
+	int count;
 	FILE *file;
+
 	file = fopen(FILENAME, "r");
 	if (file == NULL)
 	{
 		perror(FILENAME);
 		return;
 	}
-	int count = 0;
-	char next[LINE_LENGTH];
-	while((count < NUM_LINES                     )
-	   && (fgets(next, LINE_LENGTH, file) != NULL))
+
+	for(count = 0; count < NUM_LINES; count++)
 	{
-		strncpy(data[count], next, LINE_LENGTH);
-		count++;
+		if(fgets(data[count], LINE_LENGTH, file) == NULL)
+		{
+			break;
+		}
 	}
+
+	actual_num_lines = count;
 
 	fclose(file);
 }
 
 
 void thandle(int tid) {
-	uint32 start, end;
-	uint32 line_number;
-	#pragma omp private (tid, start, end, j)
+	char temp[LINE_LENGTH]; /* temporary string storage     */
+	char ret[LINE_LENGTH];  /* formatted string with lcs    */
+	char * s1;              /* pointer to string 1          */
+	char * s2;              /* pointer to string 2          */
+	uint32 len_lcs;         /* length of lcs                */
+	uint32 line_number;     /* index into data for s1       */
+	uint32 start;           /* index into data for first s1 */
+	uint32 end;             /* index into data for last s2  */
+
+	#pragma omp private (tid, temp, ret, s1, s2, len_lcs, line_number, start, end)
 	{
 		start = tid * NUM_LINES_PER_THREAD;
 		end = start + NUM_LINES_PER_THREAD;
 
 		/* Avoid reading past the end of data */
-		if(end > (NUM_LINES - 1))
+		if(end > (actual_num_lines - 1))
 		{
-			end = NUM_LINES - 1;
+			end = actual_num_lines - 1;
 		}
 
 		for (line_number = start; line_number < end; line_number++)
 		{
-			char *s1 = data[line_number];
-			char *s2 = data[line_number + 1];
-			uint32 l1 = strlen(s1);
-			uint32 l2 = strlen(s2);
-			char ret[LINE_LENGTH];
-			uint32 ml;
-			ml = lcs_dynamic(ret, s1, l1, s2, l2);
-			if (ml > 0)
+			s1 = data[line_number];
+			s2 = data[line_number + 1];
+
+			len_lcs = lcs_dynamic(ret, s1, strlen(s1), s2, strlen(s2));
+			if (len_lcs > 0)
 			{
-				char *temp[LINE_LENGTH];
-				sprintf(temp, "%2d: %3u - %3u: %s\n", tid, line_number, line_number + 1, ret);
-				strcpy(data[j], temp);
+				strcpy(lcs_data[line_number], ret);
 			}
 			else
 			{
-				char *temp[LINE_LENGTH];
-				sprintf(temp, "%2d: %3u - %3u: No common substring.\n", tid, line_number, line_number + 1);
-				strcpy(data[j], temp);
+				strcpy(lcs_data[line_number], "No common substring.");
 			}
 
 		}
 	}
+
+	return;
 }
 
 /*
@@ -197,9 +205,9 @@ int main(void)
 		thandle(omp_get_thread_num());
 	}
 	
-	for(i = 0; i < NUM_LINES - 1; i++)
+	for(i = 0; i < actual_num_lines - 1; i++)
 	{
-		printf("%s", data[i]);
+		printf("%3u - %3u: %s\n", i, i + 1, lcs_data[i]);
 	}
 	//gettimeofday(&t3, NULL);
 	//double time = (t2.tv_sec = t1.tv_sec) * 1000.0;
