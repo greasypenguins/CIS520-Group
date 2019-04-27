@@ -1,5 +1,7 @@
 #!/bin/bash
 
+## Run with: sbatch ./p4_openmp.sh
+
 #SBATCH --mem-per-cpu=2G
 
 ## Max time 1 minute
@@ -14,11 +16,14 @@
 
 #SBATCH --constraint=elves
 
+## Output text file
+#SBATCH --output=p4_omp.out
+
 ## Job title
 #SBATCH -J SGTYES
 
 ## Send email for all updates
-#SBATCH --mail-type=ALL
+##SBATCH --mail-type=ALL
 
 srun p4_omp
 
