@@ -1,6 +1,6 @@
 /*
 Command to compile:
-gcc p4_pth.c -o p4_pth
+gcc p4_pth.c -o p4_pth -lpthread -mcmodel=medium
 */
 
 #include <pthread.h>
@@ -10,7 +10,7 @@ gcc p4_pth.c -o p4_pth
 //#include <sys/time.h>
 
 #define NUM_THREADS 1
-#define NUM_LINES 20 //reduced for testing purposes
+#define NUM_LINES 1000000 //reduced for testing purposes
 #define LINE_LENGTH 2005 //reduced for testing purposes
 #define FILENAME "/homes/dan/625/wiki_dump.txt" //file of interest
 #define NUM_LINES_PER_THREAD (NUM_LINES / NUM_THREADS)
@@ -18,7 +18,7 @@ gcc p4_pth.c -o p4_pth
 typedef unsigned long int uint32;
 typedef unsigned int uint16;
 
-uint32 actual_num_lines; /* Number of lines successfully read from file */
+uint16 actual_num_lines; /* Number of lines successfully read from file */
 char data[NUM_LINES][LINE_LENGTH]; /* All data read in from file */
 char lcs_data[NUM_LINES - 1][LINE_LENGTH]; /* longest common substrings */
 
@@ -193,36 +193,26 @@ uint32 lcs_dynamic(char * ret, const char * a, uint32 a_size, const char * b, ui
 int main(void)
 {
 	int i; /* Loop counter */
-
+	int code;
 	//struct timeval t1, t2, t3;
 	pthread_t threads[NUM_THREADS];
 	pthread_attr_t attr;
 
 	pthread_attr_init(&attr);
-	pthraed_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
 	open_file();
-
-	while (!done) 
+        for (i = 0; i < NUM_THREADS; i++)
 	{
-
-		erase_chunk();
-		for (i < chunksize) {
-			readline(s);
-			if (s != header_line) copy(char_array[i], s);
-			if (feof(f))
-			{
-				done = TRUE;
-				break;
-			}
-		}
-
-		pthread_attr_destroy(&attr);
-		for (i = 0; i < NUM_THREADS; i++)
+		code = pthread_create(&threads[i], &attr, thandle, i);
+		if(code)
 		{
-			pthread_join(threads[i], &status);
+			printf("ERROR: error code from pthread_create(): %d\n", code);
+			exit(-1);
 		}
 	}
+	
+	pthread_attr_destroy(&attr);
 
 	for(i = 0; i < actual_num_lines - 1; i++)
 	{
