@@ -21,7 +21,7 @@ Find the longest common substring between two strings using dynamic programming
 Return the length of the LCS
 Write LCS to ret
 */
-uint32 lcs_dynamic(char * ret, char * a, uint32 a_size, char * b uint32 b_size)
+uint32 lcs_dynamic(char * ret, const char * a, uint32 a_size, const char * b, uint32 b_size)
 {
     uint32 i; /* loop index */
     uint32 a_idx; /* a index */

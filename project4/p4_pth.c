@@ -1,3 +1,7 @@
+/**************************************************************************
+*        THIS FILE STILL NEEDS A LOT OF UPDATING TO MATCH p4_omp.c        *
+***************************************************************************/
+
 /*
 Command to compile:
 gcc p4_pth.c -o p4_pth
@@ -9,10 +13,11 @@ gcc p4_pth.c -o p4_pth
 #include <string.h>
 //#include <sys/time.h>
 
-#define NUM_THREADS 4
+#define NUM_THREADS 1
 #define NUM_LINES 20 //reduced for testing purposes
-#define LINE_LENGTH 200 //reduced for testing purposes
-#define FILENAME "" //file of interest
+#define LINE_LENGTH 2005 //reduced for testing purposes
+#define FILENAME "/homes/dan/625/wiki_dump.txt" //file of interest
+#define NUM_LINES_PER_THREAD (NUM_LINES / NUM_THREADS)
 
 typedef unsigned long int uint32;
 typedef unsigned int uint16;
@@ -20,7 +25,7 @@ typedef unsigned int uint16;
 char data[NUM_LINES][LINE_LENGTH];
 
 void open_file(void);
-uint32 lcs_dynamic(char*, char*, uint32, char*, uint32);
+uint32 lcs_dynamic(char*, const char*, uint32, const char*, uint32);
 void thandle(int);
 
 void open_file()
@@ -34,7 +39,8 @@ void open_file()
 	}
 	int count = 0;
 	char next[LINE_LENGTH];
-	while (fgets(next, LINE_LENGTH, file) != NULL)
+	while((count < NUM_LINES                     )
+	   && (fgets(next, LINE_LENGTH, file) != NULL))
 	{
 		strncpy(data[count], next, LINE_LENGTH);
 		count++;
@@ -46,16 +52,22 @@ void open_file()
 
 void thandle(int tid) {
 	uint32 start, end;
-	uint32 j;
-//#pragma omp private (tid, start, end, j)
+	uint32 line_number;
+	//#pragma omp private (tid, start, end, j)
 	{
-		start = tid * (NUM_LINES / NUM_THREADS);
-		end = start + (NUM_LINES / NUM_THREADS);
+		start = tid * NUM_LINES_PER_THREAD;
+		end = start + NUM_LINES_PER_THREAD;
 
-		for (j = start; j < end; j++)
+		/* Avoid reading past the end of data */
+		if(end > (NUM_LINES - 1))
 		{
-			char *s1 = data[j];
-			char *s2 = data[j + 1];
+			end = NUM_LINES - 1;
+		}
+
+		for (line_number = start; line_number < end; line_number++)
+		{
+			char *s1 = data[line_number];
+			char *s2 = data[line_number + 1];
 			uint32 l1 = strlen(s1);
 			uint32 l2 = strlen(s2);
 			char ret[LINE_LENGTH];
@@ -63,12 +75,12 @@ void thandle(int tid) {
 			ml = lcs_dynamic(ret, s1, l1, s2, l2);
 			if (ml > 0)
 			{
-				printf("%d - %d: %s\n", j, j + 1, ret);
+				printf("%3u - %3u: %s\n", line_number, line_number + 1, ret);
 			}
 			else
 			{
 
-				printf("%d - %d: No common substring.\n", j, j + 1);
+				printf("%3u - %3u: No common substring.\n", line_number, line_number + 1);
 			}
 
 		}
@@ -98,7 +110,7 @@ Find the longest common substring between two strings using dynamic programming
 Return the length of the LCS
 Write LCS to ret
 */
-uint32 lcs_dynamic(char * ret, char * a, uint32 a_size, char * b, uint32 b_size)
+uint32 lcs_dynamic(char * ret, const char * a, uint32 a_size, const char * b, uint32 b_size)
 {
 	uint32 i; /* loop index */
 	uint32 a_idx; /* a index */
