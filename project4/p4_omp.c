@@ -9,10 +9,20 @@ gcc p4_omp.c -fopenmp -o p4_omp
 #include <string.h>
 //#include <sys/time.h>
 
-#define NUM_THREADS 1
-#define NUM_LINES 20
-#define LINE_LENGTH 2005
-#define FILENAME "/homes/dan/625/wiki_dump.txt"
+/* As of right now, this is the performance:
+NUM_THREADS: 4
+NUM_LINES: 10000
+LINE_LENGTH: 2005
+FILENAME: "/homes/dan/625/wiki_dump.txt"
+Memory: 0.05 GB used out of 8 GB allocated
+Run time: 50 seconds
+3427813  SGTYES      elf24             1 n   4 c    0.05gb/  8gb    00:00:50  COMPLETED
+*/
+
+#define NUM_THREADS 4 /* UPDATE IN .sh FILE TOO!!! Number of threads/cores/CPUs */
+#define NUM_LINES 10000 /* Number of lines to read in */
+#define LINE_LENGTH 2005 /* Max number of characters to store for each line */
+#define FILENAME "/homes/dan/625/wiki_dump.txt" /* File to read in line by line */
 #define NUM_LINES_PER_THREAD (NUM_LINES / NUM_THREADS)
 
 typedef unsigned long int uint32;
