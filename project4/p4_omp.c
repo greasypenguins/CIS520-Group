@@ -1,18 +1,13 @@
-/*
-Command to compile:
-gcc p4_omp.c -fopenmp -o p4_omp
-*/
-
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 //#include <sys/time.h>
 
-#define NUM_THREADS 4
-#define NUM_LINES 20 //reduced for testing purposes
-#define LINE_LENGTH 200 //reduced for testing purposes
-#define FILENAME "" //file of interest
+#define NUM_THREADS 8
+#define NUM_LINES 13500 //reduced for testing purposes
+#define LINE_LENGTH 400 //reduced for testing purposes
+#define FILENAME "bigtest.txt" //file of interest
 
 
 typedef unsigned long int uint32;
@@ -30,14 +25,14 @@ void open_file()
 	file = fopen(FILENAME, "r");
 	if (file == NULL)
 	{
-		perror(FILENAME);
+		perror(file);
 		return;
 	}
 	int count = 0;
 	char next[LINE_LENGTH];
-	while (fgets(next, LINE_LENGTH, file) != NULL) 
+	while ((fgets(next, LINE_LENGTH, file)) != NULL) 
 	{
-		strncpy(data[count], next, LINE_LENGTH);
+		strcpy(data[count], next);
 		count++;
 	}
 
@@ -59,17 +54,22 @@ void thandle(int tid) {
 			char *s2 = data[j + 1];
 			uint32 l1 = strlen(s1);
 			uint32 l2 = strlen(s2);
-			char ret[LINE_LENGTH];
+			char *ret[LINE_LENGTH];
 			uint32 ml;
 			ml = lcs_dynamic(ret, s1, l1, s2, l2);
 			if (ml > 0)
 			{
-				printf("%d - %d: %s\n", j, j + 1, ret);
+				//printf("%d: %d - %d: %s\n", tid, j, j + 1, ret);
+				char *temp[LINE_LENGTH];
+				sprintf(temp, "%d: %d - %d: %s\n", tid, j, j+1, ret);
+				strcpy(data[j], temp);
 			}
 			else
 			{
-
-				printf("%d - %d: No common substring.\n", j, j + 1);
+				char *temp[LINE_LENGTH];
+				sprintf(temp, "%d: %d - %d: No common substring.\n", tid, j, j+1);
+				strcpy(data[j], temp);
+				//temp = ("%d: %d - %d: No common substring.\n",tid, j, j + 1);
 			}
 
 		}
@@ -183,6 +183,12 @@ main()
 	#pragma omp parallel
 	{
 		thandle(omp_get_thread_num());
+	}
+	
+	int i;
+	for(i = 0; i < NUM_LINES; i++)
+	{
+		printf("%s", data[i]);
 	}
 	//gettimeofday(&t3, NULL);
 	//double time = (t2.tv_sec = t1.tv_sec) * 1000.0;
