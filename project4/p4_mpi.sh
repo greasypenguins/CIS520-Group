@@ -1,7 +1,9 @@
 #!/bin/bash
 #SBATCH --mem-per-cpu=2G
 #SBATCH --time=0:01:00
-#SBATCH --ntasks-per-node=4
+
+#I think this is related to thread number with mpi
+##SBATCH --ntasks-per-node=4
 #SBATCH --nodes=1
 #SBATCH	--cpus-per-task=4
 #SBATCH --constraint=elves
