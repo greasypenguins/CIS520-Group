@@ -10,7 +10,7 @@ gcc p4_omp.c -fopenmp -o p4_omp
 //#include <sys/time.h>
 
 #define NUM_THREADS 4 /* UPDATE IN .sh FILE TOO!!! Number of threads/cores/CPUs */
-#define NUM_LINES 10000 /* Number of lines to read in */
+#define NUM_LINES 1000000 /* Number of lines to read in */
 #define LINE_LENGTH 2005 /* Max number of characters to store for each line */
 #define FILENAME "/homes/dan/625/wiki_dump.txt" /* File to read in line by line */
 #define NUM_LINES_PER_THREAD (NUM_LINES / NUM_THREADS)

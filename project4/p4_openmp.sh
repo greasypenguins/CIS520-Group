@@ -5,7 +5,7 @@
 #SBATCH --mem-per-cpu=2G
 
 ## Max time 1 minute
-#SBATCH --time=0:01:00
+#SBATCH --time=1:30:00
 
 ## Use 1 node
 ## If commented: Use any number of nodes

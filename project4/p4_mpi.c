@@ -10,8 +10,8 @@ mpicc p4_mpi.c -o p4_mpi
 
 #define NUM_THREADS 4 /* UPDATE IN .sh FILE TOO!!! Number of threads/cores/CPUs */
 #define NUM_LINES 10000 /* Number of lines to read in */
-#define LINE_LENGTH 2005 /* Max number of characters to store for each line */
-#define FILENAME "test.txt" /* File to read in line by line */
+#define LINE_LENGTH 2003 /* Max number of characters to store for each line */
+#define FILENAME "/homes/dan/625/wiki_dump.txt" /* File to read in line by line */
 #define NUM_LINES_PER_THREAD (NUM_LINES / NUM_THREADS)
 
 typedef unsigned long int uint32;
@@ -19,11 +19,12 @@ typedef unsigned int uint16;
 
 uint32 actual_num_lines; /* Number of lines successfully read from file */
 char data[NUM_LINES][LINE_LENGTH]; /* All data read in from file */
-char lcs_data[NUM_LINES - 1][LINE_LENGTH]; /* longest common substrings */
+char* individual[NUM_LINES];
+char* lcs_data[NUM_LINES]; /* longest common substrings */
 
 void open_file(void);
 uint32 lcs_dynamic(char*, const char*, uint32, const char*, uint32);
-void thandle(int);
+void thandle(void*);
 
 void open_file()
 {
@@ -51,7 +52,8 @@ void open_file()
 }
 
 
-void thandle(int tid) {
+void thandle(void * rank) {
+	int tid = *((int*) rank);
 	char temp[LINE_LENGTH]; /* temporary string storage     */
 	char ret[LINE_LENGTH];  /* formatted string with lcs    */
 	char * s1;              /* pointer to string 1          */
@@ -79,11 +81,11 @@ void thandle(int tid) {
 		len_lcs = lcs_dynamic(ret, s1, strlen(s1), s2, strlen(s2));
 		if (len_lcs > 0)
 		{
-			strcpy(lcs_data[line_number], ret);
+			strcpy(individual[line_number], ret);
 		}
 		else
 		{
-			strcpy(lcs_data[line_number], "No common substring.");
+			strcpy(individual[line_number], "No common substring.");
 		}
 
 	}
@@ -184,16 +186,20 @@ uint32 lcs_dynamic(char * ret, const char * a, uint32 a_size, const char * b, ui
 
 
 
-int main(void)
+int main(int argc, char* argv[])
 {
 	int i; /* Loop counter */
-	int ierr, processNum; /* MPI variable*/
+	int ierr, processNum, rankNum; /* MPI variable*/
 
 	open_file();
 
-	ierr = MPI_Init(); /* Double check arguements later, may not be necessary*/
+	ierr = MPI_Init(&argc, &argv); /* Double check arguements later, may not be necessary*/
 	ierr = MPI_Comm_size(MPI_COMM_WORLD, &processNum); /* Comm_size needs a communicator input*/
-	thandle(processNum);
+	ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rankNum);
+        printf("Processes: %d\nRanks: %d\n", processNum, rankNum);
+	MPI_Bcast(data, NUM_LINES * LINE_LENGTH, MPI_CHAR, 0, MPI_COMM_WORLD); 
+	thandle(&rankNum);
+	MPI_Reduce(individual, lcs_data, NUM_LINES*LINE_LENGTH, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD);
 	ierr = MPI_Finalize(); /* Finish up MPI operations*/
 
 	for (i = 0; i < actual_num_lines - 1; i++)
