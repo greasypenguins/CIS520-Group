@@ -1,26 +1,26 @@
 /*
 Command to compile (is probably):
-mpicc p4_mpi.c -o p4_mpi
+mpicc p4_mpi.c -o p4_mpi -mcmodel=medium
 */
 
 #include <mpi.h> /* include MPI */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
-#define NUM_THREADS 4 /* UPDATE IN .sh FILE TOO!!! Number of threads/cores/CPUs */
-#define NUM_LINES 10000 /* Number of lines to read in */
+#define NUM_LINES 1000000 /* Number of lines to read in */
 #define LINE_LENGTH 2003 /* Max number of characters to store for each line */
 #define FILENAME "/homes/dan/625/wiki_dump.txt" /* File to read in line by line */
-#define NUM_LINES_PER_THREAD (NUM_LINES / NUM_THREADS)
 
 typedef unsigned long int uint32;
 typedef unsigned int uint16;
 
+uint32 NUM_LINES_PER_THREAD;
 uint32 actual_num_lines; /* Number of lines successfully read from file */
 char data[NUM_LINES][LINE_LENGTH]; /* All data read in from file */
-char* individual[NUM_LINES];
-char* lcs_data[NUM_LINES]; /* longest common substrings */
+char individual[NUM_LINES-1][LINE_LENGTH];
+char lcs_data[NUM_LINES-1][LINE_LENGTH]; /* longest common substrings */
 
 void open_file(void);
 uint32 lcs_dynamic(char*, const char*, uint32, const char*, uint32);
@@ -63,50 +63,35 @@ void thandle(void * rank) {
 	uint32 start;           /* index into data for first s1 */
 	uint32 end;             /* index into data for last s2  */
 
-
-	start = tid * NUM_LINES_PER_THREAD;
-	end = start + NUM_LINES_PER_THREAD;
-
-	/* Avoid reading past the end of data */
-	if (end > (actual_num_lines - 1))
 	{
-		end = actual_num_lines - 1;
-	}
+		start = tid * NUM_LINES_PER_THREAD;
+		end = start + NUM_LINES_PER_THREAD;
 
-	for (line_number = start; line_number < end; line_number++)
-	{
-		s1 = data[line_number];
-		s2 = data[line_number + 1];
-
-		len_lcs = lcs_dynamic(ret, s1, strlen(s1), s2, strlen(s2));
-		if (len_lcs > 0)
+		/* Avoid reading past the end of data */
+		if(end > (actual_num_lines - 1))
 		{
-			strcpy(individual[line_number], ret);
-		}
-		else
-		{
-			strcpy(individual[line_number], "No common substring.");
+			end = actual_num_lines - 1;
 		}
 
+		for (line_number = start; line_number < end; line_number++)
+		{
+			s1 = data[line_number];
+			s2 = data[line_number + 1];
+			len_lcs = lcs_dynamic(ret, s1, strlen(s1), s2, strlen(s2));
+			if (len_lcs > 0)
+			{
+				strcpy(lcs_data[line_number], ret);
+			}
+			else
+			{
+				strcpy(lcs_data[line_number], "No common substring.");
+			}
+
+		}
 	}
 
 	return;
 }
-
-/*
-Find the longest common substring
-Options are:
-suffix tree         O(m + n)
-dynamic programming O(m * n)
-Dynamic programming is easier though
-~dan/625/wiki_dump.txt
-The longest line in wiki_dump.txt is 2000 characters.
-So with dynamic programming we need 2000*2000*2 = 8MB of memory for each table in memory, assuming constant size tables.
-With dynamic memory allocation, this is a maximum, not a constant.
-*/
-
-
-
 
 /*
 Find the longest common substring between two strings using dynamic programming
@@ -189,24 +174,38 @@ uint32 lcs_dynamic(char * ret, const char * a, uint32 a_size, const char * b, ui
 int main(int argc, char* argv[])
 {
 	int i; /* Loop counter */
-	int ierr, processNum, rankNum; /* MPI variable*/
+	int ierr, processNum, rankNum; /* MPI variable */
+	struct timeval t1, t2, t3, t4;
 
+	gettimeofday(&t1, NULL);
 	open_file();
-
+	gettimeofday(&t2, NULL);
 	ierr = MPI_Init(&argc, &argv); /* Double check arguements later, may not be necessary*/
 	ierr = MPI_Comm_size(MPI_COMM_WORLD, &processNum); /* Comm_size needs a communicator input*/
+	NUM_LINES_PER_THREAD= NUM_LINES/processNum;
 	ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rankNum);
         printf("Processes: %d\nRanks: %d\n", processNum, rankNum);
-	MPI_Bcast(data, NUM_LINES * LINE_LENGTH, MPI_CHAR, 0, MPI_COMM_WORLD); 
+	MPI_Bcast(data, NUM_LINES_PER_THREAD, MPI_CHAR, 0, MPI_COMM_WORLD);
 	thandle(&rankNum);
-	MPI_Reduce(individual, lcs_data, NUM_LINES*LINE_LENGTH, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD);
 	ierr = MPI_Finalize(); /* Finish up MPI operations*/
-
+	gettimeofday(&t3,NULL);
 	for (i = 0; i < actual_num_lines - 1; i++)
 	{
 		printf("%3u - %3u: %s\n", i, i + 1, lcs_data[i]);
 	}
 
+	gettimeofday(&t4, NULL);
+	double time = (t2.tv_sec - t1.tv_sec) * 1000.0;
+	time += (t2.tv_usec - t1.tv_usec) / 1000.0;
+	printf("Time to read data: %f\n", time);
+
+	time = (t3.tv_sec - t2.tv_sec) * 1000.0;
+	time += (t3.tv_usec - t2.tv_usec) / 1000.0;
+	printf("Time to determine LCS: %f\n",time);
+
+	time = (t4.tv_sec - t3.tv_sec) * 1000.0;
+	time += (t4.tv_usec - t3.tv_usec) / 1000.0;
+	printf("Time to print: %f\n", time);
 	printf("Program Completed. \n");
 
 	return 0;

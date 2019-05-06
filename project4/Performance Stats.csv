@@ -1,3 +1,0 @@
-OMP,,,,,,
-Nodes,Threads,Lines,Memory Requested,Memory Used,Run Time,Line
-1,4,10000,8,0.05,50,3427813  SGTYES      elf24             1 n   4 c    0.05gb/  8gb    00:00:50  COMPLETED
